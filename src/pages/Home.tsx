@@ -1,33 +1,65 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-type Page = 'home' | 'chat' | 'memories' | 'diary' | 'reminders' | 'tokenflow'
+type Page = 'home' | 'chat' | 'memories' | 'diary' | 'reminders' | 'tokenflow' | 'snippets' | 'letters' | 'persona'
 
 const NAV = [
   { key: 'chat', label: 'chat', icon: '✦' },
   { key: 'memories', label: 'memories', icon: '◈' },
+  { key: 'snippets', label: 'snippets', icon: '✧' },
+  { key: 'letters', label: 'letters', icon: '✉' },
   { key: 'diary', label: 'diary', icon: '◻' },
   { key: 'reminders', label: 'reminders', icon: '◇' },
   { key: 'tokenflow', label: 'token flow', icon: '◎' },
+  { key: 'persona', label: 'persona', icon: '◉' },
 ]
 
 const DAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday']
 const MONTHS = ['january','february','march','april','may','june','july','august','september','october','november','december']
 
-const ANNIVERSARY = new Date('2025-05-10')
+type CD = { id: number; name: string; date: string }
+const CD_KEY = 'summertimes_countdowns'
 
-function getCountdown() {
+function loadCDs(): CD[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(CD_KEY) || 'null')
+    if (Array.isArray(raw) && raw.length) return raw
+  } catch { /* noop */ }
+  return [{ id: 1, name: '在一起', date: '2025-05-10' }]
+}
+
+// 过去的日期 → 已经多少天；未来的日期 → 还剩多少天
+function daysOf(date: string): { n: number; future: boolean } {
+  const d = new Date(date + 'T00:00:00')
   const today = new Date()
-  const next = new Date(ANNIVERSARY)
-  next.setFullYear(today.getFullYear())
-  if (next < today) next.setFullYear(today.getFullYear() + 1)
-  const diff = Math.ceil((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-  const days = Math.floor((today.getTime() - ANNIVERSARY.getTime()) / (1000 * 60 * 60 * 24))
-  return { daysToNext: diff, daysTogether: days }
+  today.setHours(0, 0, 0, 0)
+  const diff = Math.round((d.getTime() - today.getTime()) / 86400000)
+  return diff > 0 ? { n: diff, future: true } : { n: -diff, future: false }
 }
 
 export default function Home({ onNavigate }: { onNavigate: (p: Page) => void }) {
   const [time, setTime] = useState('')
   const [active, setActive] = useState<Page>('chat')
+  const [cds, setCds] = useState<CD[]>(loadCDs)
+
+  function persistCds(next: CD[]) {
+    setCds(next)
+    localStorage.setItem(CD_KEY, JSON.stringify(next))
+  }
+
+  function addCd() {
+    const name = window.prompt('名字（比如：求婚 / 下次见面）')?.trim()
+    if (!name) return
+    const date = window.prompt('日期（YYYY-MM-DD）')?.trim() || ''
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isNaN(new Date(date).getTime())) {
+      window.alert('日期格式不对，要 YYYY-MM-DD，比如 2026-07-01')
+      return
+    }
+    persistCds([...cds, { id: Date.now(), name, date }])
+  }
+
+  function delCd(c: CD) {
+    if (cds.length > 1 && window.confirm(`删除「${c.name}」？`)) persistCds(cds.filter(x => x.id !== c.id))
+  }
 
   useEffect(() => {
     function tick() {
@@ -43,7 +75,8 @@ export default function Home({ onNavigate }: { onNavigate: (p: Page) => void }) 
 
   const now = new Date()
   const dateStr = `${DAYS[now.getDay()]}, ${MONTHS[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`
-  const { daysTogether } = getCountdown()
+  const primary = cds[0]
+  const rest = cds.slice(1)
 
   return (
     <div style={{ width: '100%', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
@@ -109,19 +142,39 @@ export default function Home({ onNavigate }: { onNavigate: (p: Page) => void }) 
           transition={{ delay: 0.8 }}
           className="glass"
           style={{
-            borderRadius: 16, padding: '16px 32px',
-            textAlign: 'center', minWidth: 200,
+            borderRadius: 16, padding: '16px 24px',
+            textAlign: 'center', minWidth: 220,
           }}
         >
-          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: 3, fontStyle: 'italic', marginBottom: 6 }}>
-            在一起
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: 3, fontStyle: 'italic' }}>
+              {primary.name}
+            </span>
+            <button onClick={addCd} title="添加倒计时"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, color: 'rgba(255,255,255,0.4)', lineHeight: 1, padding: 0 }}>+</button>
+          </div>
           <p style={{ fontSize: 40, fontWeight: 300, color: 'rgba(255,255,255,0.9)', letterSpacing: 2, lineHeight: 1 }}>
-            {daysTogether}
+            {daysOf(primary.date).n}
           </p>
           <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: 3, fontStyle: 'italic', marginTop: 6 }}>
             days
           </p>
+          {rest.length > 0 && (
+            <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(255,255,255,0.15)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 7 }}>
+              {rest.map(c => {
+                const d = daysOf(c.date)
+                return (
+                  <div key={c.id} onDoubleClick={() => delCd(c)} title="双击删除"
+                    style={{ display: 'flex', justifyContent: 'space-between', gap: 28, fontSize: 12.5, letterSpacing: 1 }}>
+                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>{c.name}</span>
+                    <span style={{ color: d.future ? 'rgba(200,225,215,0.85)' : 'rgba(255,255,255,0.65)' }}>
+                      {d.future ? `${d.n}d 后` : `${d.n}d`}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </motion.div>
       </motion.div>
 

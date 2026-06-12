@@ -8,6 +8,18 @@ type DayLog = Record<string, number>
 export default function TokenFlow({ onNavigate }: { onNavigate: (p: Page) => void }) {
   const [log, setLog] = useState<DayLog>({})
   const [sessionTokens, setSessionTokens] = useState(0)
+  const [price, setPrice] = useState<number>(() => parseFloat(localStorage.getItem('summertimes_price_per_m') || '0'))
+  const [editingPrice, setEditingPrice] = useState(false)
+
+  function savePrice(v: string) {
+    const n = parseFloat(v)
+    const ok = !isNaN(n) && n >= 0 ? n : 0
+    setPrice(ok)
+    localStorage.setItem('summertimes_price_per_m', String(ok))
+    setEditingPrice(false)
+  }
+
+  const cost = (tokens: number) => price > 0 ? `¥${((tokens / 1_000_000) * price).toFixed(2)}` : ''
 
   useEffect(() => {
     const raw = localStorage.getItem('summertimes_tokens')
@@ -35,17 +47,33 @@ export default function TokenFlow({ onNavigate }: { onNavigate: (p: Page) => voi
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px 20px', scrollbarWidth: 'none' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 28 }}>
             {[
-              { label: 'today', value: todayTokens.toLocaleString() },
-              { label: 'session', value: sessionTokens.toLocaleString() },
-              { label: 'total', value: totalTokens.toLocaleString() },
+              { label: 'today', value: todayTokens.toLocaleString(), cost: cost(todayTokens) },
+              { label: 'session', value: sessionTokens.toLocaleString(), cost: cost(sessionTokens) },
+              { label: 'total', value: totalTokens.toLocaleString(), cost: cost(totalTokens) },
             ].map(c => (
               <motion.div key={c.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                 className="glass" style={{ borderRadius: 14, padding: '14px 10px', textAlign: 'center' }}>
                 <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', letterSpacing: 2, fontStyle: 'italic', marginBottom: 6 }}>{c.label}</p>
                 <p style={{ fontSize: 22, fontWeight: 300, color: 'rgba(255,255,255,0.9)', letterSpacing: 1 }}>{c.value}</p>
+                {c.cost && <p style={{ fontSize: 11, color: 'rgba(180,210,200,0.65)', letterSpacing: 1, marginTop: 4 }}>{c.cost}</p>}
               </motion.div>
             ))}
           </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+            {editingPrice ? (
+              <input autoFocus defaultValue={price || ''} placeholder="0.00" inputMode="decimal"
+                onBlur={e => savePrice(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') savePrice((e.target as HTMLInputElement).value) }}
+                style={{ width: 120, background: 'rgba(255,255,255,0.1)', border: '0.5px solid rgba(255,255,255,0.25)', borderRadius: 14, padding: '5px 12px', fontFamily: "'Cormorant Garamond', serif", fontSize: 13, color: 'rgba(255,255,255,0.9)', outline: 'none', textAlign: 'center' }} />
+            ) : (
+              <button onClick={() => setEditingPrice(true)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11.5, color: 'rgba(255,255,255,0.4)', letterSpacing: 1.5, fontStyle: 'italic', fontFamily: "'Cormorant Garamond', serif" }}>
+                {price > 0 ? `¥${price} / 1M tokens · 估算 · 点击修改` : '点击设置单价（¥/1M tokens）开启费用估算'}
+              </button>
+            )}
+          </div>
+
           <div className="glass" style={{ borderRadius: 16, padding: '20px 16px' }}>
             <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: 3, fontStyle: 'italic', marginBottom: 16 }}>recent 14 days</p>
             {days.length === 0 ? (
@@ -75,7 +103,7 @@ export default function TokenFlow({ onNavigate }: { onNavigate: (p: Page) => voi
             {days.slice(0, 7).map(([date, count]) => (
               <div key={date} style={{ display: 'flex', gap: 12, marginBottom: 6 }}>
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>{new Date(date).toLocaleDateString()}</span>
-                <span style={{ fontSize: 11, color: 'rgba(180,210,200,0.7)' }}>+{count.toLocaleString()} tokens</span>
+                <span style={{ fontSize: 11, color: 'rgba(180,210,200,0.7)' }}>+{count.toLocaleString()} tokens{price > 0 ? ` · ${cost(count)}` : ''}</span>
               </div>
             ))}
           </div>
