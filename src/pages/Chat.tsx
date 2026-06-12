@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 type Page = 'home' | 'chat' | 'memories' | 'diary' | 'reminders' | 'tokenflow' | 'snippets' | 'letters' | 'persona'
@@ -127,10 +127,24 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const msgCountRef = useRef(0)
+  const firstRender = useRef(true)
+  const [showJump, setShowJump] = useState(false)
+
+  // 进入页面：绘制前瞬间定位到底部，没有滑动过程
+  useLayoutEffect(() => {
+    const el = scrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [])
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(messages))
-    if (!showSearch) scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
+    if (firstRender.current) { firstRender.current = false; return }
+    const el = scrollRef.current
+    if (!el || showSearch) return
+    const isMine = messages[messages.length - 1]?.role === 'user'
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150
+    // Eve发的消息永远滚到底；Claude的回复只在本来就在底部附近时才自动滚
+    if (isMine || nearBottom) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
   }, [messages])
 
   useEffect(() => {
@@ -267,7 +281,12 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
           </AnimatePresence>
         </div>
 
-        <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 20, scrollbarWidth: 'none' }}>
+        <div ref={scrollRef}
+          onScroll={() => {
+            const el = scrollRef.current
+            if (el) setShowJump(el.scrollHeight - el.scrollTop - el.clientHeight > 300)
+          }}
+          style={{ flex: 1, overflowY: 'auto', padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 20, scrollbarWidth: 'none' }}>
           <AnimatePresence initial={false}>
             {displayMessages.map(m => (
               <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
@@ -305,6 +324,17 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
             </motion.div>
           )}
         </div>
+
+        {showJump && !showSearch && (
+          <button className="glass"
+            onClick={() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })}
+            style={{ position: 'absolute', bottom: 96, left: '50%', marginLeft: -42, width: 84,
+              padding: '6px 0', borderRadius: 20, border: '0.5px solid rgba(255,255,255,0.25)',
+              fontFamily: "'Cormorant Garamond', serif", fontSize: 13,
+              color: 'rgba(255,255,255,0.85)', cursor: 'pointer', zIndex: 5 }}>
+            ↓ 最新
+          </button>
+        )}
 
         {!showSearch && (
           <div className="glass" style={{ display: 'flex', alignItems: 'flex-end', gap: 10, padding: '12px 16px 20px', borderRadius: 0, borderBottom: 'none', borderLeft: 'none', borderRight: 'none' }}>
