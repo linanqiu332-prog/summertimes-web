@@ -24,7 +24,7 @@ function loadCDs(): CD[] {
     const raw = JSON.parse(localStorage.getItem(CD_KEY) || 'null')
     if (Array.isArray(raw) && raw.length) return raw
   } catch { /* noop */ }
-  return [{ id: 1, name: '在一起', date: '2025-05-10' }]
+  return [{ id: 1, name: '在一起', date: '2026-05-10' }]
 }
 
 // 过去的日期 → 已经多少天；未来的日期 → 还剩多少天

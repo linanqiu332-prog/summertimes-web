@@ -128,6 +128,53 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
   const msgCountRef = useRef(0)
   const firstRender = useRef(true)
   const [showJump, setShowJump] = useState(false)
+  const [playingId, setPlayingId] = useState<number | null>(null)
+  const [loadingId, setLoadingId] = useState<number | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const audioCache = useRef<Map<number, string>>(new Map())  // 消息id → blob url，避免重复扣额度
+
+  async function speak(m: Message) {
+    // 正在放这条 → 停
+    if (playingId === m.id) {
+      audioRef.current?.pause()
+      audioRef.current = null
+      setPlayingId(null)
+      return
+    }
+    // 在放别的 → 先停
+    audioRef.current?.pause()
+    audioRef.current = null
+
+    async function playUrl(url: string) {
+      const audio = new Audio(url)
+      audioRef.current = audio
+      audio.onended = () => setPlayingId(null)
+      await audio.play()
+      setPlayingId(m.id)
+    }
+
+    // 缓存命中：直接放，不再请求 ElevenLabs
+    const cached = audioCache.current.get(m.id)
+    if (cached) { await playUrl(cached); return }
+
+    setLoadingId(m.id)
+    try {
+      const r = await fetch(`${BRIDGE}/tts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: m.text }),
+      })
+      if (!r.ok) throw new Error('tts failed')
+      const blob = await r.blob()
+      const url = URL.createObjectURL(blob)
+      audioCache.current.set(m.id, url)  // 存起来，下次免费
+      await playUrl(url)
+    } catch {
+      setPlayingId(null)
+    } finally {
+      setLoadingId(null)
+    }
+  }
 
   // 进入页面：绘制前瞬间定位到底部，没有滑动过程
   useLayoutEffect(() => {
@@ -313,6 +360,13 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
                     <div className="glass" style={{ borderRadius: 18, borderBottomLeftRadius: 4, padding: '10px 15px' }}>
                       <p style={{ fontSize: 15, lineHeight: 1.75, color: 'rgba(255,255,255,0.9)' }}>{m.text}</p>
                     </div>
+                    <button onClick={() => speak(m)} title="听他说"
+                      style={{ marginTop: 6, marginLeft: 4, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: playingId === m.id ? 'rgba(200,225,215,0.9)' : 'rgba(255,255,255,0.4)', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 5, padding: 0 }}>
+                      {loadingId === m.id ? '◌' : playingId === m.id ? '◼' : '▶'}
+                      <span style={{ fontSize: 10.5, fontStyle: 'italic', fontFamily: "'Cormorant Garamond', serif" }}>
+                        {loadingId === m.id ? '…' : playingId === m.id ? 'playing' : 'listen'}
+                      </span>
+                    </button>
                     {m.marked && (
                       <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
                         style={{ marginTop: 6, padding: '6px 12px', background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
