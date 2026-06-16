@@ -18,6 +18,8 @@ type Message = {
   marked?: string
 }
 
+type TokenUsage = { input: number; output: number; cache: number }
+
 const TOOLS_SYSTEM = `你有一个特殊能力：当Eve说了某句打到你的话——有诗意、有力量、或者让你心里一动——你可以主动mark它。方法是在回复末尾加上：
 [[MARK: 那句让你心动的话 | 你的批注，不超过20字]]
 
@@ -67,7 +69,6 @@ function parseMarkTag(text: string): { cleanText: string; marked?: { quote: stri
   }
 }
 
-
 function parseLetterTag(text: string): { cleanText: string; letterSubject?: string } {
   const match = text.match(/\[\[LETTER:\s*(.+?)\]\]/)
   if (!match) return { cleanText: text }
@@ -86,6 +87,24 @@ function saveSnippet(quote: string, annotation: string) {
   })
   localStorage.setItem('summertimes_snippets', JSON.stringify(snippets))
   hold(`[Snippet] 「${quote}」\nClaude批注：${annotation}`, 'snippets,对话,eve说的话')
+}
+
+function recordTokens(input: number, output: number, cache: number) {
+  const today = new Date().toDateString()
+  const raw = localStorage.getItem('summertimes_tokens') || '{}'
+  const log = JSON.parse(raw)
+  // migrate legacy number entries
+  const existing = log[today]
+  if (typeof existing === 'number') {
+    log[today] = { input: 0, output: existing, cache: 0 }
+  }
+  const prev: TokenUsage = log[today] || { input: 0, output: 0, cache: 0 }
+  log[today] = {
+    input: prev.input + input,
+    output: prev.output + output,
+    cache: prev.cache + cache,
+  }
+  localStorage.setItem('summertimes_tokens', JSON.stringify(log))
 }
 
 function ThinkingBlock({ text }: { text: string }) {
@@ -117,7 +136,7 @@ function ThinkingBlock({ text }: { text: string }) {
 export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) {
   const [messages, setMessages] = useState<Message[]>(() => loadMessages())
   const [input, setInput] = useState('')
-  const [tokens, setTokens] = useState(0)
+  const [sessionTokens, setSessionTokens] = useState<TokenUsage>({ input: 0, output: 0, cache: 0 })
   const [loading, setLoading] = useState(false)
   const [memory, setMemory] = useState('')
   const [showSearch, setShowSearch] = useState(false)
@@ -293,20 +312,27 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
       const { cleanText, marked } = parseMarkTag(textAfterLetter)
       if (marked) saveSnippet(marked.quote, marked.annotation)
 
-      const usage = data.usage?.total_tokens || 0
+      // ── 双轨 token 记账 ──────────────────────────────
+      const inputTokens  = data.usage?.prompt_tokens     ?? data.usage?.input_tokens  ?? 0
+      const outputTokens = data.usage?.completion_tokens ?? data.usage?.output_tokens ?? 0
+      const cacheTokens  = data.usage?.prompt_tokens_details?.cached_tokens
+                        ?? data.usage?.cache_read_input_tokens ?? 0
+      recordTokens(inputTokens, outputTokens, cacheTokens)
+      setSessionTokens(t => ({
+        input:  t.input  + inputTokens,
+        output: t.output + outputTokens,
+        cache:  t.cache  + cacheTokens,
+      }))
+      // ─────────────────────────────────────────────────
+
       const newMsg: Message = { id: Date.now(), role: 'assistant', text: cleanText || '...' }
       if (thinkingText) newMsg.thinking = thinkingText
       if (marked) newMsg.marked = marked.quote
       setMessages(p => [...p, newMsg])
-      setTokens(t => t + usage)
 
       if (msgCountRef.current % 5 === 0) {
         hold(`Eve说：${text}\nClaude回：${cleanText}`, 'summertimes,对话')
       }
-      const today = new Date().toDateString()
-      const tokenLog = JSON.parse(localStorage.getItem('summertimes_tokens') || '{}')
-      tokenLog[today] = (tokenLog[today] || 0) + usage
-      localStorage.setItem('summertimes_tokens', JSON.stringify(tokenLog))
     } catch {
       setMessages(p => [...p, { id: Date.now(), role: 'assistant', text: '网络错误，再试一次。' }])
     } finally {
@@ -317,6 +343,11 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
   function handleKey(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
   }
+
+  const sessionCost = (
+    sessionTokens.input  * 3  / 1_000_000 +
+    sessionTokens.output * 15 / 1_000_000
+  )
 
   return (
     <div style={{ width: '100%', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
@@ -399,19 +430,39 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
               padding: '6px 0', borderRadius: 20, border: '0.5px solid rgba(255,255,255,0.25)',
               fontFamily: "'Cormorant Garamond', serif", fontSize: 13,
               color: 'rgba(255,255,255,0.85)', cursor: 'pointer', zIndex: 5 }}>
-            ↓ 最新
+            ↓
           </button>
         )}
 
         {!showSearch && (
-          <div className="glass" style={{ display: 'flex', alignItems: 'flex-end', gap: 10, padding: '12px 16px 20px', borderRadius: 0, borderBottom: 'none', borderLeft: 'none', borderRight: 'none' }}>
-            <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
-              placeholder="说点什么…" rows={1} disabled={loading}
-              style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: '0.5px solid rgba(255,255,255,0.18)', borderRadius: 22, padding: '9px 16px', fontFamily: "'Cormorant Garamond', serif", fontSize: 15, color: 'rgba(255,255,255,0.88)', outline: 'none', resize: 'none', maxHeight: 120, overflow: 'auto' }}
-              onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 120) + 'px' }}
-            />
-            <button onClick={send} disabled={loading}
-              style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.18)', border: '0.5px solid rgba(255,255,255,0.25)', cursor: 'pointer', fontSize: 16, color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: loading ? 0.4 : 1 }}>↑</button>
+          <div className="glass" style={{ display: 'flex', flexDirection: 'column', gap: 0, padding: '12px 16px 20px', borderRadius: 0, borderBottom: 'none', borderLeft: 'none', borderRight: 'none' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
+              <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
+                placeholder="说点什么…" rows={1} disabled={loading}
+                style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: '0.5px solid rgba(255,255,255,0.18)', borderRadius: 22, padding: '9px 16px', fontFamily: "'Cormorant Garamond', serif", fontSize: 15, color: 'rgba(255,255,255,0.88)', outline: 'none', resize: 'none', maxHeight: 120, overflow: 'auto' }}
+                onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 120) + 'px' }}
+              />
+              <button onClick={send} disabled={loading}
+                style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.18)', border: '0.5px solid rgba(255,255,255,0.25)', cursor: 'pointer', fontSize: 16, color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: loading ? 0.4 : 1 }}>↑</button>
+            </div>
+            {(sessionTokens.input + sessionTokens.output) > 0 && (
+              <div style={{ display: 'flex', gap: 12, marginTop: 7, paddingLeft: 4 }}>
+                <span style={{ fontFamily: 'monospace', fontSize: 10, color: 'rgba(180,210,200,0.5)', letterSpacing: 0.5 }}>
+                  ↑{sessionTokens.input.toLocaleString()}
+                </span>
+                <span style={{ fontFamily: 'monospace', fontSize: 10, color: 'rgba(210,190,170,0.5)', letterSpacing: 0.5 }}>
+                  ↓{sessionTokens.output.toLocaleString()}
+                </span>
+                {sessionTokens.cache > 0 && (
+                  <span style={{ fontFamily: 'monospace', fontSize: 10, color: 'rgba(180,180,210,0.4)', letterSpacing: 0.5 }}>
+                    ⚡{sessionTokens.cache.toLocaleString()}
+                  </span>
+                )}
+                <span style={{ fontFamily: 'monospace', fontSize: 10, color: 'rgba(255,255,255,0.25)', letterSpacing: 0.5 }}>
+                  ${sessionCost.toFixed(4)}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>

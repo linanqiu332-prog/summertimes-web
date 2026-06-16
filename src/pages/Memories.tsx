@@ -20,6 +20,24 @@ type Bucket = {
 
 type Stats = { pinned: number; dynamic: number; archived: number; size: string }
 
+type Snippet = {
+  id: number
+  quote: string
+  annotation: string
+  from: 'eve' | 'claude'
+  markedBy: 'eve' | 'claude'
+  date: string
+}
+
+type Letter = {
+  id: number
+  subject: string
+  body: string
+  from: 'eve' | 'claude'
+  date: string
+  replyTo?: number
+}
+
 // 解析 pulse 返回的文本
 function parsePulse(text: string): { stats: Stats; buckets: Bucket[] } {
   const stats: Stats = { pinned: 0, dynamic: 0, archived: 0, size: '' }
@@ -53,14 +71,12 @@ function parsePulse(text: string): { stats: Stats; buckets: Bucket[] } {
   return { stats, buckets }
 }
 
-// 分类规则（Sprint 2.1）：核心=钉选或importance≥9，长期=6-8，短期=≤5
 function tierOf(b: Bucket): 'core' | 'long' | 'short' {
   if (b.pinned || b.importance >= 9) return 'core'
   if (b.importance >= 6) return 'long'
   return 'short'
 }
 
-// 权重条：对数刻度，999→满格
 function weightPct(w: number): number {
   return Math.min(100, (Math.log10(w + 1) / 3) * 100)
 }
@@ -86,19 +102,15 @@ function BucketCard({ b, onPin, onDelete }: { b: Bucket; onPin: (b: Bucket) => v
             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>✕</button>
         </div>
       </div>
-
-      {/* 权重条 */}
       <div style={{ marginTop: 8, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
         <motion.div initial={{ width: 0 }} animate={{ width: `${weightPct(b.weight)}%` }} transition={{ duration: 0.6 }}
           style={{ height: '100%', borderRadius: 2, background: b.pinned ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)' }} />
       </div>
-
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 7, fontSize: 10.5, color: 'rgba(255,255,255,0.4)', letterSpacing: 1 }}>
         <span>重要 {b.importance}</span>
         <span>权重 {b.weight >= 999 ? '∞' : b.weight.toFixed(1)}</span>
         <span>V{b.valence} · A{b.arousal}</span>
       </div>
-
       {b.tags.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
           {b.tags.slice(0, 5).map(t => (
@@ -113,11 +125,100 @@ function BucketCard({ b, onPin, onDelete }: { b: Bucket; onPin: (b: Bucket) => v
   )
 }
 
+function SnippetsTab() {
+  const [items, setItems] = useState<Snippet[]>([])
+  const [expanded, setExpanded] = useState<number | null>(null)
+
+  useEffect(() => {
+    try { setItems(JSON.parse(localStorage.getItem('summertimes_snippets') || '[]')) } catch {}
+  }, [])
+
+  if (items.length === 0) return (
+    <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', fontSize: 14, marginTop: 60, letterSpacing: 2, lineHeight: 2 }}>
+      还没有 mark 过的句子
+    </p>
+  )
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {items.map(s => (
+        <motion.div key={s.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="glass" onClick={() => setExpanded(expanded === s.id ? null : s.id)}
+            style={{ borderRadius: 16, padding: '14px 16px', cursor: 'pointer' }}>
+            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, lineHeight: 1.75, color: 'rgba(255,255,255,0.9)', fontStyle: 'italic' }}>
+              「{s.quote}」
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: 2, fontStyle: 'italic' }}>from {s.from}</span>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: 1 }}>{s.date}</span>
+            </div>
+          </div>
+          <AnimatePresence>
+            {expanded === s.id && s.annotation && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                style={{ overflow: 'hidden', marginTop: 6, padding: '12px 16px', background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 12 }}>
+                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: 2, marginBottom: 6, fontStyle: 'italic' }}>claude的批注</p>
+                <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.7 }}>{s.annotation}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      ))}
+    </div>
+  )
+}
+
+function LettersTab() {
+  const [letters, setLetters] = useState<Letter[]>([])
+  const [expanded, setExpanded] = useState<number | null>(null)
+
+  useEffect(() => {
+    try { setLetters(JSON.parse(localStorage.getItem('summertimes_letters') || '[]')) } catch {}
+  }, [])
+
+  if (letters.length === 0) return (
+    <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', fontSize: 14, marginTop: 60, letterSpacing: 2, lineHeight: 2 }}>
+      还没有信
+    </p>
+  )
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {letters.map(l => (
+        <motion.div key={l.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="glass" onClick={() => setExpanded(expanded === l.id ? null : l.id)}
+            style={{ borderRadius: 16, padding: '14px 16px', cursor: 'pointer' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, color: 'rgba(255,255,255,0.9)' }}>{l.subject}</span>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: 1 }}>{l.date}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>
+                {l.body.substring(0, 60)}{l.body.length > 60 ? '…' : ''}
+              </p>
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: 2, flexShrink: 0 }}>from {l.from}</span>
+            </div>
+          </div>
+          <AnimatePresence>
+            {expanded === l.id && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                style={{ overflow: 'hidden', marginTop: 6, padding: '16px', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 14 }}>
+                <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, color: 'rgba(255,255,255,0.82)', lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>{l.body}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      ))}
+    </div>
+  )
+}
+
 export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void }) {
   const [buckets, setBuckets] = useState<Bucket[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [tab, setTab] = useState<'buckets' | 'snippets' | 'letters'>('buckets')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -166,6 +267,12 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
     items: buckets.filter(b => tierOf(b) === t).sort((a, b) => b.weight - a.weight),
   }))
 
+  const TABS = [
+    { key: 'buckets',  label: '记忆桶' },
+    { key: 'snippets', label: 'snippets' },
+    { key: 'letters',  label: 'letters' },
+  ] as const
+
   return (
     <div style={{ width: '100%', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
       <div className="bg" /><div className="overlay" />
@@ -174,45 +281,67 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
         <div className="glass" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
           <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: 'rgba(255,255,255,0.7)', lineHeight: 1 }}>‹</button>
           <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, letterSpacing: 4, color: 'rgba(255,255,255,0.88)' }}>memories</span>
-          <button onClick={load} disabled={loading} title="刷新"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'rgba(255,255,255,0.45)', opacity: loading ? 0.3 : 1 }}>↻</button>
+          {tab === 'buckets'
+            ? <button onClick={load} disabled={loading} title="刷新"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'rgba(255,255,255,0.45)', opacity: loading ? 0.3 : 1 }}>↻</button>
+            : <span style={{ width: 24 }} />
+          }
+        </div>
+
+        {/* Tab bar */}
+        <div style={{ display: 'flex', gap: 0, padding: '10px 20px 0', borderBottom: '0.5px solid rgba(255,255,255,0.08)' }}>
+          {TABS.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontFamily: "'Cormorant Garamond', serif", fontSize: 13, letterSpacing: 2,
+              color: tab === t.key ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.32)',
+              padding: '6px 16px 10px',
+              borderBottom: tab === t.key ? '1.5px solid rgba(255,255,255,0.6)' : '1.5px solid transparent',
+              marginBottom: -1,
+            }}>
+              {t.label}
+            </button>
+          ))}
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 96px', scrollbarWidth: 'none' }}>
 
-          {stats && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              style={{ display: 'flex', justifyContent: 'center', gap: 18, marginBottom: 24, fontSize: 11.5, color: 'rgba(255,255,255,0.45)', letterSpacing: 2, fontStyle: 'italic' }}>
-              <span>钉选 {stats.pinned}</span>
-              <span>动态 {stats.dynamic}</span>
-              <span>归档 {stats.archived}</span>
-              {stats.size && <span>{stats.size}</span>}
-            </motion.div>
-          )}
-
-          {loading && (
-            <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontStyle: 'italic', fontSize: 14, marginTop: 60, letterSpacing: 2 }}>把脉中…</p>
-          )}
-
-          {error && !loading && (
-            <p style={{ textAlign: 'center', color: 'rgba(255,180,170,0.6)', fontStyle: 'italic', fontSize: 13, marginTop: 60, letterSpacing: 1 }}>{error}</p>
-          )}
-
-          {!loading && !error && tiers.map(tier => (
-            tier.items.length > 0 && (
-              <div key={tier.key} style={{ marginBottom: 28 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12, paddingLeft: 2 }}>
-                  <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, letterSpacing: 3, color: 'rgba(255,255,255,0.85)' }}>{tier.label}</span>
-                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: 1.5, fontStyle: 'italic' }}>{tier.sub} · {tier.items.length}</span>
+          {tab === 'buckets' && (<>
+            {stats && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                style={{ display: 'flex', justifyContent: 'center', gap: 18, marginBottom: 24, fontSize: 11.5, color: 'rgba(255,255,255,0.45)', letterSpacing: 2, fontStyle: 'italic' }}>
+                <span>钉选 {stats.pinned}</span>
+                <span>动态 {stats.dynamic}</span>
+                <span>归档 {stats.archived}</span>
+                {stats.size && <span>{stats.size}</span>}
+              </motion.div>
+            )}
+            {loading && (
+              <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontStyle: 'italic', fontSize: 14, marginTop: 60, letterSpacing: 2 }}>把脉中…</p>
+            )}
+            {error && !loading && (
+              <p style={{ textAlign: 'center', color: 'rgba(255,180,170,0.6)', fontStyle: 'italic', fontSize: 13, marginTop: 60, letterSpacing: 1 }}>{error}</p>
+            )}
+            {!loading && !error && tiers.map(tier => (
+              tier.items.length > 0 && (
+                <div key={tier.key} style={{ marginBottom: 28 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12, paddingLeft: 2 }}>
+                    <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, letterSpacing: 3, color: 'rgba(255,255,255,0.85)' }}>{tier.label}</span>
+                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: 1.5, fontStyle: 'italic' }}>{tier.sub} · {tier.items.length}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <AnimatePresence>
+                      {tier.items.map(b => <BucketCard key={b.id} b={b} onPin={onPin} onDelete={onDelete} />)}
+                    </AnimatePresence>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <AnimatePresence>
-                    {tier.items.map(b => <BucketCard key={b.id} b={b} onPin={onPin} onDelete={onDelete} />)}
-                  </AnimatePresence>
-                </div>
-              </div>
-            )
-          ))}
+              )
+            ))}
+          </>)}
+
+          {tab === 'snippets' && <SnippetsTab />}
+          {tab === 'letters'  && <LettersTab />}
+
         </div>
       </div>
       <BottomNav current="memories" onNavigate={onNavigate} />
