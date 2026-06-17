@@ -14,5 +14,6 @@ ssh root@45.77.8.147 '
   git pull &&
   npm run build &&
   cp -r dist/. /var/www/summertimes/ &&
+  systemctl restart bridge &&
   echo "✅ deployed to https://summertimes.app"
 '
