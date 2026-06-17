@@ -21,7 +21,7 @@ export default function BottomNav({ current, onNavigate }: { current: Page; onNa
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',
       borderTop: '0.5px solid rgba(255,255,255,0.1)',
-      padding: '10px 8px 20px',
+      padding: '10px 4px calc(16px + env(safe-area-inset-bottom, 0px))',
     }}>
       <div style={{
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
@@ -40,7 +40,7 @@ export default function BottomNav({ current, onNavigate }: { current: Page; onNa
               }}
             >
               <span style={{
-                fontSize: 18,
+                fontSize: 16,
                 color: active ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.38)',
                 transition: 'color 0.2s',
               }}>
@@ -48,7 +48,7 @@ export default function BottomNav({ current, onNavigate }: { current: Page; onNa
               </span>
               <span style={{
                 fontFamily: "'Cormorant Garamond', serif",
-                fontSize: 9, letterSpacing: 1.5,
+                fontSize: 8, letterSpacing: 1.2,
                 color: active ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)',
                 transition: 'color 0.2s',
               }}>
@@ -69,7 +69,7 @@ export default function BottomNav({ current, onNavigate }: { current: Page; onNa
           }}
         >
           <span style={{
-            fontSize: 18,
+            fontSize: 16,
             color: 'rgba(255,255,255,0.38)',
             transition: 'color 0.2s',
           }}>
@@ -77,7 +77,7 @@ export default function BottomNav({ current, onNavigate }: { current: Page; onNa
           </span>
           <span style={{
             fontFamily: "'Cormorant Garamond', serif",
-            fontSize: 9, letterSpacing: 1.5,
+            fontSize: 8, letterSpacing: 1.2,
             color: 'rgba(255,255,255,0.3)',
             transition: 'color 0.2s',
           }}>

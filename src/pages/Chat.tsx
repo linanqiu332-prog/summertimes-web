@@ -435,11 +435,11 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
         )}
 
         {!showSearch && (
-          <div className="glass" style={{ display: 'flex', flexDirection: 'column', gap: 0, padding: '12px 16px 20px', borderRadius: 0, borderBottom: 'none', borderLeft: 'none', borderRight: 'none' }}>
+          <div className="glass" style={{ display: 'flex', flexDirection: 'column', gap: 0, padding: '12px 16px calc(20px + env(safe-area-inset-bottom, 0px))', borderRadius: 0, borderBottom: 'none', borderLeft: 'none', borderRight: 'none' }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
               <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
                 placeholder="说点什么…" rows={1} disabled={loading}
-                style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: '0.5px solid rgba(255,255,255,0.18)', borderRadius: 22, padding: '9px 16px', fontFamily: "'Cormorant Garamond', serif", fontSize: 15, color: 'rgba(255,255,255,0.88)', outline: 'none', resize: 'none', maxHeight: 120, overflow: 'auto' }}
+                style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: '0.5px solid rgba(255,255,255,0.18)', borderRadius: 22, padding: '9px 16px', fontFamily: "'Cormorant Garamond', serif", fontSize: 16, color: 'rgba(255,255,255,0.88)', outline: 'none', resize: 'none', maxHeight: 120, overflow: 'auto' }}
                 onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 120) + 'px' }}
               />
               <button onClick={send} disabled={loading}
