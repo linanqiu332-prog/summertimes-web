@@ -57,6 +57,33 @@ export default function BottomNav({ current, onNavigate }: { current: Page; onNa
             </motion.button>
           )
         })}
+
+        {/* OmbreBrain 外链入口 */}
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={() => window.open('https://ombre.summertimes.app', '_blank')}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            padding: '4px 8px',
+          }}
+        >
+          <span style={{
+            fontSize: 18,
+            color: 'rgba(255,255,255,0.38)',
+            transition: 'color 0.2s',
+          }}>
+            ⬡
+          </span>
+          <span style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: 9, letterSpacing: 1.5,
+            color: 'rgba(255,255,255,0.3)',
+            transition: 'color 0.2s',
+          }}>
+            ombre
+          </span>
+        </motion.button>
       </div>
     </div>
   )
