@@ -1,6 +1,30 @@
 #!/usr/bin/env python3
-import json, httpx, asyncio, os
+import json, httpx, asyncio, os, sqlite3
 from http.server import HTTPServer, BaseHTTPRequestHandler
+
+# ── 聊天记录持久化 ───────────────────────────────────────
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "history.db")
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY, data TEXT NOT NULL)")
+    conn.commit()
+    conn.close()
+
+def load_history():
+    conn = sqlite3.connect(DB_PATH)
+    row = conn.execute("SELECT data FROM history WHERE id = 1").fetchone()
+    conn.close()
+    return json.loads(row[0]) if row else []
+
+def save_history(data):
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("INSERT OR REPLACE INTO history (id, data) VALUES (1, ?)", (json.dumps(data),))
+    conn.commit()
+    conn.close()
+
+init_db()
+# ─────────────────────────────────────────────────────────
 
 # 从 summertimes-web/.env 读 key（不带 VITE_ 的后端专用）
 def load_env(path):
@@ -95,9 +119,23 @@ class Handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
+
+    def do_GET(self):
+        if self.path == "/history":
+            data = load_history()
+            body = json.dumps(data).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        else:
+            self.send_response(404)
+            self.end_headers()
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))
@@ -133,6 +171,9 @@ class Handler(BaseHTTPRequestHandler):
             result = asyncio.run(call_tool("pulse", {
                 "include_archive": body.get("include_archive", False)
             }))
+        elif self.path == "/history":
+            save_history(body)
+            result = {"ok": True}
         elif self.path == "/trace":
             args = {"bucket_id": body.get("bucket_id", "")}
             # 只传前端给了的字段，没给的不传（trace 的约定：不传=不改）

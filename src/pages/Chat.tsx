@@ -37,6 +37,25 @@ function loadMessages(): Message[] {
   return [{ id: 0, role: 'assistant', text: '你在。' }]
 }
 
+async function loadRemoteHistory(): Promise<Message[]> {
+  try {
+    const r = await fetch(`${BRIDGE}/history`)
+    if (!r.ok) return []
+    const data = await r.json()
+    return Array.isArray(data) ? data : []
+  } catch { return [] }
+}
+
+async function saveRemoteHistory(msgs: Message[]) {
+  try {
+    await fetch(`${BRIDGE}/history`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(msgs),
+    })
+  } catch {}
+}
+
 async function breath(query: string): Promise<string> {
   try {
     const r = await fetch(`${BRIDGE}/breath`, {
@@ -213,13 +232,30 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
   }, [messages])
 
   useEffect(() => {
+    // 从 VPS 拉历史，与 localStorage 合并（按 id 去重，VPS 优先）
+    loadRemoteHistory().then(remote => {
+      if (remote.length > 0) {
+        setMessages(local => {
+          const map = new Map<number, Message>()
+          local.forEach(m => map.set(m.id, m))
+          remote.forEach(m => map.set(m.id, m))
+          const merged = Array.from(map.values()).sort((a, b) => a.id - b.id)
+          if (merged.length !== local.length) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(merged))
+            return merged
+          }
+          return local
+        })
+      }
+    })
+
     Promise.all([
-    breath("eve summertimes"),
-    breath("letters 信件 eve写的信")
-  ]).then(([m1, m2]) => {
-    const combined = [m1, m2].filter(Boolean).join("\n---\n")
-    if (combined) setMemory(combined)
-  })
+      breath("eve summertimes"),
+      breath("letters 信件 eve写的信")
+    ]).then(([m1, m2]) => {
+      const combined = [m1, m2].filter(Boolean).join("\n---\n")
+      if (combined) setMemory(combined)
+    })
     inputRef.current?.focus()
   }, [])
 
@@ -328,7 +364,11 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
       const newMsg: Message = { id: Date.now(), role: 'assistant', text: cleanText || '...' }
       if (thinkingText) newMsg.thinking = thinkingText
       if (marked) newMsg.marked = marked.quote
-      setMessages(p => [...p, newMsg])
+      setMessages(p => {
+        const updated = [...p, newMsg]
+        saveRemoteHistory(updated)
+        return updated
+      })
 
       if (msgCountRef.current % 5 === 0) {
         hold(`Eve说：${text}\nClaude回：${cleanText}`, 'summertimes,对话')
