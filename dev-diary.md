@@ -75,20 +75,41 @@ ombre.summertimes.app    → Nginx → OmbreBrain :8000 (dashboard)
 
 ---
 
-## Sprint 5 计划（优先级排序）
+## Sprint 5 · 2026-06-18
 
-1. **git 作者信息配置** — 每次 commit 都在报警，5分钟搞定
-   ```bash
-   git config --global user.name "Eve"
-   git config --global user.email "linanqiu332@gmail.com"
-   ```
+### git 作者信息
+`git config --global user.name "Eve"` + `user.email "linanqiu332@gmail.com"`，不再报警。
 
-2. **Claude Desktop → VPS OmbreBrain** — 现在本地 Claude Desktop 连的是 Mac 本地 OmbreBrain，Mac 关了记忆工具就断了。改成连 VPS 的 OmbreBrain（`https://ombre.summertimes.app/mcp`），实现真正的随时可用。
+### Claude Desktop → VPS OmbreBrain
+编写 `connect-vps-ombre.sh`：在 VPS nginx ombre 配置中添加 `/mcp` location（无 Basic Auth），然后更新 Claude Desktop `claude_desktop_config.json` 将 OmbreBrain URL 改为 `https://ombre.summertimes.app/mcp`。Mac 关机后 Claude Desktop 记忆工具仍可用。
 
-3. **App 内 OmbreBrain 入口** — 在 Summertimes 导航栏加一个跳转到 `ombre.summertimes.app` 的入口，不用另开浏览器标签。
+### App 内 OmbreBrain 入口
+BottomNav 末尾新增 `⬡ ombre` 按钮，点击新标签打开 `https://ombre.summertimes.app`。
 
-4. **手机端体验优化** — 输入框、字体大小、间距等在移动端的细节打磨。
+### 手机端体验优化
+三处修复：`index.html` 补 `viewport-fit=cover`（iPhone home bar 不遮内容）；textarea `fontSize` 15→16px（防 iOS 自动放大）；BottomNav 底部 padding 改为 `calc(16px + env(safe-area-inset-bottom, 0px))`，图标/标签略缩（8项导航）。
 
-5. **聊天记录跨设备同步** — 工作量最大，需要后端存储（VPS 上加 SQLite 或文件存储，bridge.py 新增 `/history` 接口）。放最后。
+### 聊天记录跨设备同步
+bridge.py 新增 SQLite 持久化（`history.db`）及 `GET/POST /history` 接口；Chat.tsx 进入时拉取 VPS 历史并按 ID 合并本地，每次收到助手回复后自动推送全量消息到 VPS。deploy.sh 补 `systemctl restart bridge`，保证 bridge.py 更新后立即生效。
 
-6. **API keys 轮换** — 低优先级，但有空去各平台 regenerate 一下：apiyi、ElevenLabs、DeepSeek。
+### 当前架构（更新）
+
+```
+summertimes.app           → Nginx → /var/www/summertimes (React静态)
+summertimes.app/api/*     → Nginx → bridge.py :8888 → OmbreBrain :8000
+summertimes.app/api/history  ← SQLite history.db 跨设备同步
+ombre.summertimes.app     → Nginx → OmbreBrain :8000 (dashboard)
+ombre.summertimes.app/mcp → Nginx → OmbreBrain :8000/mcp (Claude Desktop MCP)
+```
+
+---
+
+## Sprint 6 计划（优先级排序）
+
+1. **OmbreBrain grow / dream 工具接入** — bridge.py 目前只有 breath/hold/pulse/trace，grow（主动生长记忆）和 dream（离线整理）还没接进来。
+
+2. **历史记录管理** — 消息越来越多，需要：清空按钮、只保留最近 N 条上下文（降 token 消耗）、可选的历史搜索联动 VPS 而非只搜本地缓存。
+
+3. **Diary 页完善** — 入口已在 Home，但功能基本是空的。可以做成日记本：每天一篇，存 VPS。
+
+4. **API keys 轮换** — apiyi、ElevenLabs、DeepSeek 都在代码/聊天里暴露过，有空 regenerate。
