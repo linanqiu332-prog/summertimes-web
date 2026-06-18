@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { syncFromVPS } from './sync'
 import Home from './pages/Home'
 import Chat from './pages/Chat'
 import Reminders from './pages/Reminders'
@@ -14,6 +15,13 @@ export type Page = 'home' | 'chat' | 'memories' | 'diary' | 'reminders' | 'token
 
 export default function App() {
   const [page, setPage] = useState<Page>('home')
+  const [synced, setSynced] = useState(false)
+
+  useEffect(() => {
+    syncFromVPS().finally(() => setSynced(true))
+  }, [])
+  if (!synced) return <div className="app"><div className="bg" /><div className="overlay" /></div>
+
   return (
     <div className="app">
       {page === 'home'      && <Home      onNavigate={setPage} />}

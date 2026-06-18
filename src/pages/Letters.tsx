@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import BottomNav from '../components/BottomNav'
+import { BRIDGE } from '../bridge'
 
 type Page = 'home' | 'chat' | 'memories' | 'diary' | 'reminders' | 'tokenflow' | 'snippets' | 'letters' | 'persona'
 
@@ -16,7 +17,6 @@ type Letter = {
 const STORAGE_KEY = 'summertimes_letters'
 const API_KEY = import.meta.env.VITE_API_KEY
 const API_URL = import.meta.env.VITE_API_URL
-const BRIDGE = import.meta.env.VITE_BRIDGE_URL
 
 function load(): Letter[] {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') } catch { return [] }
@@ -116,7 +116,7 @@ export default function Letters({ onNavigate }: { onNavigate: (p: Page) => void 
   }
 
   return (
-    <div style={{ width: '100%', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
+    <div className="safe-screen" style={{ width: '100%', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
       <div className="bg" /><div className="overlay" />
       <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>
 

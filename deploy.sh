@@ -6,7 +6,8 @@ set -e
 
 echo "▶ pushing to GitHub..."
 git add -A
-git diff --cached --quiet && echo "  nothing to commit, skipping push" || git commit -m "deploy: $(date '+%Y-%m-%d %H:%M')" && git push
+git diff --cached --quiet || git commit -m "deploy: $(date '+%Y-%m-%d %H:%M')"
+git push
 
 echo "▶ deploying to VPS..."
 ssh root@45.77.8.147 '

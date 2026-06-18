@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { syncToVPS } from '../sync'
 type Page = 'home' | 'chat' | 'memories' | 'diary' | 'reminders' | 'tokenflow' | 'snippets' | 'letters' | 'persona'
 
 const NAV = [
@@ -44,6 +45,7 @@ export default function Home({ onNavigate }: { onNavigate: (p: Page) => void }) 
   function persistCds(next: CD[]) {
     setCds(next)
     localStorage.setItem(CD_KEY, JSON.stringify(next))
+    syncToVPS(CD_KEY)
   }
 
   function addCd() {
@@ -79,7 +81,7 @@ export default function Home({ onNavigate }: { onNavigate: (p: Page) => void }) 
   const rest = cds.slice(1)
 
   return (
-    <div style={{ width: '100%', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
+    <div className="safe-screen" style={{ width: '100%', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
       <div className="bg" />
       <div className="overlay" />
 

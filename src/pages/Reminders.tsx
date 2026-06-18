@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import BottomNav from '../components/BottomNav'
+import { syncToVPS } from '../sync'
 
 type Page = 'home' | 'chat' | 'memories' | 'diary' | 'reminders' | 'tokenflow' | 'snippets' | 'letters' | 'persona'
 type Color = 'rose' | 'sand' | 'sage' | 'sky' | 'lavender'
@@ -24,7 +25,10 @@ export default function Reminders({ onNavigate }: { onNavigate: (p: Page) => voi
   const [color, setColor] = useState<Color>('sand')
   const [deadline, setDeadline] = useState('')
 
-  useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)) }, [items])
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+    syncToVPS(STORAGE_KEY)
+  }, [items])
 
   function add() {
     if (!text.trim()) return
@@ -38,7 +42,7 @@ export default function Reminders({ onNavigate }: { onNavigate: (p: Page) => voi
   const sorted = [...items].sort((a, b) => a.pinned !== b.pinned ? (a.pinned ? -1 : 1) : 0)
 
   return (
-    <div style={{ width: '100%', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
+    <div className="safe-screen" style={{ width: '100%', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
       <div className="bg" /><div className="overlay" />
       <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>
         <div className="glass" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
@@ -51,7 +55,7 @@ export default function Reminders({ onNavigate }: { onNavigate: (p: Page) => voi
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
               className="glass" style={{ margin: '12px 16px', borderRadius: 16, padding: '16px', overflow: 'hidden' }}>
               <textarea value={text} onChange={e => setText(e.target.value)} placeholder="提醒内容…" rows={2}
-                style={{ width: '100%', background: 'rgba(255,255,255,0.08)', border: '0.5px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '8px 12px', fontFamily: "'Cormorant Garamond', serif", fontSize: 15, color: 'rgba(255,255,255,0.88)', outline: 'none', resize: 'none' }} />
+                style={{ width: '100%', background: 'rgba(255,255,255,0.08)', border: '0.5px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '8px 12px', fontFamily: "'Cormorant Garamond', serif", fontSize: 16, color: 'rgba(255,255,255,0.88)', outline: 'none', resize: 'none' }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
                 {(Object.keys(COLORS) as Color[]).map(c => (
                   <button key={c} onClick={() => setColor(c)} style={{ width: 20, height: 20, borderRadius: '50%', background: COLORS[c].dot, border: color === c ? '2px solid rgba(255,255,255,0.8)' : '2px solid transparent', cursor: 'pointer', flexShrink: 0 }} />

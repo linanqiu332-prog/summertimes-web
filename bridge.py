@@ -8,6 +8,7 @@ DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "history.db")
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     conn.execute("CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY, data TEXT NOT NULL)")
+    conn.execute("CREATE TABLE IF NOT EXISTS store (key TEXT PRIMARY KEY, data TEXT NOT NULL)")
     conn.commit()
     conn.close()
 
@@ -20,6 +21,18 @@ def load_history():
 def save_history(data):
     conn = sqlite3.connect(DB_PATH)
     conn.execute("INSERT OR REPLACE INTO history (id, data) VALUES (1, ?)", (json.dumps(data),))
+    conn.commit()
+    conn.close()
+
+def get_all_store():
+    conn = sqlite3.connect(DB_PATH)
+    rows = conn.execute("SELECT key, data FROM store").fetchall()
+    conn.close()
+    return {row[0]: json.loads(row[1]) for row in rows}
+
+def set_store(key, data):
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("INSERT OR REPLACE INTO store (key, data) VALUES (?, ?)", (key, json.dumps(data)))
     conn.commit()
     conn.close()
 
@@ -133,6 +146,15 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+        elif self.path == "/store":
+            data = get_all_store()
+            body = json.dumps(data).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
         else:
             self.send_response(404)
             self.end_headers()
@@ -174,6 +196,16 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == "/history":
             save_history(body)
             result = {"ok": True}
+        elif self.path == "/store":
+            set_store(body.get("key", ""), body.get("data"))
+            result = {"ok": True}
+        elif self.path == "/grow":
+            result = asyncio.run(call_tool("grow", {
+                "bucket_id": body.get("bucket_id", ""),
+                "content": body.get("content", "")
+            }))
+        elif self.path == "/dream":
+            result = asyncio.run(call_tool("dream", {}))
         elif self.path == "/trace":
             args = {"bucket_id": body.get("bucket_id", "")}
             # 只传前端给了的字段，没给的不传（trace 的约定：不传=不改）

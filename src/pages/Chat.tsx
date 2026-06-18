@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getPersona, getEvePersona } from '../persona'
+import { syncToVPS } from '../sync'
+import { BRIDGE } from '../bridge'
 
 type Page = 'home' | 'chat' | 'memories' | 'diary' | 'reminders' | 'tokenflow' | 'snippets' | 'letters' | 'persona'
 
 const API_KEY = import.meta.env.VITE_API_KEY
 const API_URL = import.meta.env.VITE_API_URL
-const BRIDGE = import.meta.env.VITE_BRIDGE_URL
 const MODEL = 'claude-sonnet-4-6'
 const STORAGE_KEY = 'summertimes_messages'
 
@@ -105,6 +106,7 @@ function saveSnippet(quote: string, annotation: string) {
     date: new Date().toLocaleDateString('zh-CN'),
   })
   localStorage.setItem('summertimes_snippets', JSON.stringify(snippets))
+  syncToVPS('summertimes_snippets')
   hold(`[Snippet] 「${quote}」\nClaude批注：${annotation}`, 'snippets,对话,eve说的话')
 }
 
@@ -124,6 +126,7 @@ function recordTokens(input: number, output: number, cache: number) {
     cache: prev.cache + cache,
   }
   localStorage.setItem('summertimes_tokens', JSON.stringify(log))
+  syncToVPS('summertimes_tokens')
 }
 
 function ThinkingBlock({ text }: { text: string }) {
@@ -309,7 +312,7 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
           model: MODEL,
           messages: [
             { role: 'system', content: systemPrompt },
-            ...newMessages.map(m => ({ role: m.role, content: m.text })),
+            ...newMessages.slice(-30).map(m => ({ role: m.role, content: m.text })),
           ],
           max_tokens: 8000,
           thinking: { type: 'enabled', budget_tokens: 5000 },
@@ -343,6 +346,7 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
           const existing = JSON.parse(localStorage.getItem("summertimes_letters") || "[]")
           existing.unshift({ id: Date.now(), subject: letterSubject, body: lBody, from: "claude", date: new Date().toLocaleDateString("zh-CN") })
           localStorage.setItem("summertimes_letters", JSON.stringify(existing))
+          syncToVPS("summertimes_letters")
         }).catch(()=>{})
       }
       const { cleanText, marked } = parseMarkTag(textAfterLetter)
@@ -384,13 +388,22 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
   }
 
+  function clearHistory() {
+    if (!window.confirm('清空所有聊天记录？本机和云端都会删除，无法恢复。')) return
+    const fresh: Message[] = [{ id: 0, role: 'assistant', text: '你在。' }]
+    setMessages(fresh)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh))
+    saveRemoteHistory(fresh)
+    setShowSearch(false)
+  }
+
   const sessionCost = (
     sessionTokens.input  * 3  / 1_000_000 +
     sessionTokens.output * 15 / 1_000_000
   )
 
   return (
-    <div style={{ width: '100%', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
+    <div className="safe-screen" style={{ width: '100%', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
       <div className="bg" /><div className="overlay" />
       <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
 
@@ -406,7 +419,15 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
                 style={{ overflow: 'hidden', padding: '0 16px 12px' }}>
                 <input ref={searchRef} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="搜索消息…"
                   style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: '0.5px solid rgba(255,255,255,0.18)', borderRadius: 20, padding: '7px 16px', fontFamily: "'Cormorant Garamond', serif", fontSize: 14, color: 'rgba(255,255,255,0.88)', outline: 'none', boxSizing: 'border-box' }} />
-                {searchQuery && <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 6, paddingLeft: 4, fontStyle: 'italic', letterSpacing: 1 }}>{displayMessages.length} 条结果</p>}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 7, paddingLeft: 4 }}>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontStyle: 'italic', letterSpacing: 1 }}>
+                    {searchQuery ? `${displayMessages.length} 条结果` : `共 ${messages.length} 条`}
+                  </span>
+                  <button onClick={clearHistory}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'rgba(255,180,170,0.6)', letterSpacing: 1, fontFamily: "'Cormorant Garamond', serif" }}>
+                    清空记录
+                  </button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

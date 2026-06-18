@@ -17,18 +17,27 @@ body {
   overflow: hidden;
 }
 
+/* 背景与遮罩用 fixed 锚定整个视口：无视任何祖先的 overflow:hidden / padding，
+   始终铺满全屏（含 Dynamic Island / 状态栏区域）。配合 index.html 的
+   status-bar-style: black-translucent，海滩图延伸到顶部，消除黑条。 */
 .bg {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=85') center/cover no-repeat;
   z-index: 0;
 }
 
 .overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: rgba(70,88,100,0.45);
   z-index: 1;
+}
+
+/* 内容层留出顶部安全区，避免状态栏时钟 / 灵动岛压住页面顶栏。
+   背景层 fixed 已铺满全屏，不受这个 padding 影响。 */
+.safe-screen {
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .glass {

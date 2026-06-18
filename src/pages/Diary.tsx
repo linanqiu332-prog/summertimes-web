@@ -2,12 +2,13 @@ import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import BottomNav from '../components/BottomNav'
 import { getPersona } from '../persona'
+import { syncToVPS } from '../sync'
+import { BRIDGE } from '../bridge'
 
 type Page = 'home' | 'chat' | 'memories' | 'diary' | 'reminders' | 'tokenflow' | 'snippets' | 'letters' | 'persona'
 
 const API_KEY = import.meta.env.VITE_API_KEY
 const API_URL = import.meta.env.VITE_API_URL
-const BRIDGE = import.meta.env.VITE_BRIDGE_URL
 const MODEL = 'claude-sonnet-4-6'
 const DIARY_KEY = 'summertimes_diary'
 const MSG_KEY = 'summertimes_messages'
@@ -67,6 +68,7 @@ export default function Diary({ onNavigate }: { onNavigate: (p: Page) => void })
   function persist(next: Entry[]) {
     setEntries(next)
     localStorage.setItem(DIARY_KEY, JSON.stringify(next))
+    syncToVPS(DIARY_KEY)
   }
 
   function saveEve() {
@@ -113,7 +115,7 @@ export default function Diary({ onNavigate }: { onNavigate: (p: Page) => void })
   }, [entries])
 
   return (
-    <div style={{ width: '100%', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
+    <div className="safe-screen" style={{ width: '100%', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
       <div className="bg" /><div className="overlay" />
       <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
 
@@ -171,7 +173,7 @@ export default function Diary({ onNavigate }: { onNavigate: (p: Page) => void })
         <div className="glass" style={{ display: 'flex', alignItems: 'flex-end', gap: 10, padding: '12px 16px 88px', borderRadius: 0, borderBottom: 'none', borderLeft: 'none', borderRight: 'none' }}>
           <textarea value={input} onChange={e => setInput(e.target.value)} placeholder="今天…" rows={1}
             onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 120) + 'px' }}
-            style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: '0.5px solid rgba(255,255,255,0.18)', borderRadius: 22, padding: '9px 16px', fontFamily: "'Cormorant Garamond', serif", fontSize: 15, color: 'rgba(255,255,255,0.88)', outline: 'none', resize: 'none', maxHeight: 120, overflow: 'auto' }} />
+            style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: '0.5px solid rgba(255,255,255,0.18)', borderRadius: 22, padding: '9px 16px', fontFamily: "'Cormorant Garamond', serif", fontSize: 16, color: 'rgba(255,255,255,0.88)', outline: 'none', resize: 'none', maxHeight: 120, overflow: 'auto' }} />
           <button onClick={saveEve}
             style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.18)', border: '0.5px solid rgba(255,255,255,0.25)', cursor: 'pointer', fontSize: 16, color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✓</button>
         </div>

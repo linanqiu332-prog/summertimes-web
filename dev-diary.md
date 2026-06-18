@@ -104,12 +104,66 @@ ombre.summertimes.app/mcp → Nginx → OmbreBrain :8000/mcp (Claude Desktop MCP
 
 ---
 
-## Sprint 6 计划（优先级排序）
+## Sprint 6 · 2026-06-18～19
 
-1. **OmbreBrain grow / dream 工具接入** — bridge.py 目前只有 breath/hold/pulse/trace，grow（主动生长记忆）和 dream（离线整理）还没接进来。
+### 已完成
 
-2. **历史记录管理** — 消息越来越多，需要：清空按钮、只保留最近 N 条上下文（降 token 消耗）、可选的历史搜索联动 VPS 而非只搜本地缓存。
+**非聊天数据跨设备同步**
+新建 `src/sync.ts`，定义 `SYNC_KEYS`（tokens / snippets / letters / countdowns / diary / reminders），`syncFromVPS()` 冷启动时先拉 VPS 全量写入本地，再把本地全量推回 VPS；`syncToVPS(key)` 每次写操作后增量推。App.tsx 挂载时调用 `syncFromVPS()`，加 `synced` 渲染门控（同步完成前只渲染背景）。
 
-3. **Diary 页完善** — 入口已在 Home，但功能基本是空的。可以做成日记本：每天一篇，存 VPS。
+bridge.py 新增 SQLite `store` 表，`GET /store` 返回全部键值，`POST /store` 写入单条。
 
-4. **API keys 轮换** — apiyi、ElevenLabs、DeepSeek 都在代码/聊天里暴露过，有空 regenerate。
+各页面写操作后追加 `syncToVPS` 调用：Chat.tsx（tokens / snippets / letters）、Home.tsx（countdowns）、Diary.tsx、Reminders.tsx。
+
+**上下文截断**
+Chat.tsx 中发 API 请求前 `.slice(-30)` 只取最近 30 条消息，避免无限膨胀。（注：System prompt 本身较大，实际 input bytes 仍较高，见"未解决"）
+
+**OmbreBrain grow / dream 接入**
+bridge.py 新增 `POST /grow`（参数：bucket_id, content）和 `POST /dream`（无参），转发至 OmbreBrain MCP 工具。前端 UI 尚未接入。
+
+**Diary / Reminders 完善**
+两页 textarea `fontSize` 15→16px 防 iOS 自动放大；Diary 和 Reminders 的持久化函数均补 `syncToVPS`。
+
+**PWA**
+`public/manifest.json`（name / display:standalone / background+theme:#1a1f24 / icons）、`public/sw.js`（cache-name `summertimes-v2`，network-first，跳过 /api/）、`index.html` 补全 PWA meta（apple-mobile-web-app-capable / status-bar-style:black / theme-color）+ service worker 注册。
+
+**deploy.sh 修复**
+- 原 bug：`git diff --cached --quiet || git commit && git push`，若暂存区干净（但有未推送 commit）会跳过 push。
+- 修复：改为先 `git add -A`，再条件 commit，最后无条件 `git push`。
+- 新增 `systemctl restart bridge`，保证 bridge.py 更新后立即生效。
+
+---
+
+### 未解决 🔴
+
+**PWA 顶部黑条（Dynamic Island 下方）**
+iOS 独立模式下，状态栏区域出现一截 `#1a1f24` 深色背景，beach 图未延伸上去。已尝试三种方案均失败：
+
+| 方案 | 问题 |
+|---|---|
+| `.app` 加 `padding-top: env(safe-area-inset-top)`，`.bg/.overlay` 加负 top | `overflow:hidden` 裁掉溢出部分，图片反而缺角 |
+| `body` 直接设 beach 图 `background-attachment: fixed` | iOS Safari / PWA 不支持 `fixed` attachment，图片不渲染 |
+| `status-bar-style: black` + 恢复 body 纯色 | 条仍在，左侧出现文字残影 |
+
+根本原因尚不明确：可能是 iOS 把 safe-area-inset-top 区域单独合成，与 `overflow:hidden` 容器不在同一层。待尝试方向：用 `position:fixed; inset:0` 替代 `height:100dvh`，或重装 PWA（iOS 缓存 meta 标签于安装时）。
+
+**跨设备同步仍未生效**
+症状：手机 PWA 除 chat 外其余数据不同步。根本原因疑为 `VITE_BRIDGE_URL=http://localhost:8888` —— 该值在 `.gitignore` 的 `.env` 中，VPS build 时若用同一值，手机端请求会打到手机本地（不存在的服务）。VPS 上的 `.env` 内容待确认。
+
+排查命令（需在 Mac 终端运行）：
+```bash
+ssh root@45.77.8.147 'cat /opt/summertimes-web/.env && echo "---" && curl -s http://localhost:8888/store'
+```
+
+**上下文截断效果有限**
+`slice(-30)` 保留最近 30 条有效，但 system prompt（persona + 工具描述）本身体积大，实测两条消息 input 仍达 24322 字节。需单独精简 system prompt 或把 persona 移至首条 user message。
+
+---
+
+### 下一步
+
+1. 确认 VPS `.env` 中 `VITE_BRIDGE_URL` 的实际值，修复同步
+2. PWA 顶部黑条：尝试 `position:fixed` 方案 + 重装 PWA
+3. 精简 system prompt，降低每次请求 token 基线
+4. grow / dream 前端 UI
+5. 历史记录管理：清空按钮 + 消息计数展示

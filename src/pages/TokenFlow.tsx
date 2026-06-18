@@ -68,7 +68,7 @@ export default function TokenFlow({ onNavigate }: { onNavigate: (p: Page) => voi
   const maxTotal = Math.max(...days.map(d => d.entry.input + d.entry.output), 1)
 
   return (
-    <div style={{ width: '100%', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
+    <div className="safe-screen" style={{ width: '100%', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
       <div className="bg" /><div className="overlay" />
       <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>
 

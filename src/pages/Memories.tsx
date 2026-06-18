@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import BottomNav from '../components/BottomNav'
+import { BRIDGE } from '../bridge'
 
 type Page = 'home' | 'chat' | 'memories' | 'diary' | 'reminders' | 'tokenflow' | 'snippets' | 'letters' | 'persona'
-
-const BRIDGE = import.meta.env.VITE_BRIDGE_URL
 
 type Bucket = {
   id: string
@@ -87,7 +86,7 @@ const TIER_META = {
   short: { label: '短期记忆', sub: '随时间衰减' },
 } as const
 
-function BucketCard({ b, onPin, onDelete }: { b: Bucket; onPin: (b: Bucket) => void; onDelete: (b: Bucket) => void }) {
+function BucketCard({ b, onPin, onDelete, onGrow }: { b: Bucket; onPin: (b: Bucket) => void; onDelete: (b: Bucket) => void; onGrow: (b: Bucket) => void }) {
   return (
     <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
       className="glass" style={{ borderRadius: 16, padding: '12px 15px' }}>
@@ -96,6 +95,8 @@ function BucketCard({ b, onPin, onDelete }: { b: Bucket; onPin: (b: Bucket) => v
           {b.name}
         </span>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+          <button onClick={() => onGrow(b)} title="补充进这个记忆桶"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, color: 'rgba(255,255,255,0.4)', lineHeight: 1 }}>＋</button>
           <button onClick={() => onPin(b)} title={b.pinned ? '取消钉选' : '钉选'}
             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, opacity: b.pinned ? 1 : 0.35 }}>📌</button>
           <button onClick={() => onDelete(b)} title="删除"
@@ -219,6 +220,8 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [tab, setTab] = useState<'buckets' | 'snippets' | 'letters'>('buckets')
+  const [dreaming, setDreaming] = useState(false)
+  const [notice, setNotice] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -261,6 +264,46 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
     if (window.confirm(`确定删除「${b.name}」？这条记忆会永久消失。`)) trace({ bucket_id: b.id, delete: true })
   }
 
+  // grow：往某个记忆桶补充内容
+  async function onGrow(b: Bucket) {
+    const content = window.prompt(`补充进「${b.name}」：`)?.trim()
+    if (!content) return
+    try {
+      await fetch(`${BRIDGE}/grow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bucket_id: b.id, content }),
+      })
+      setNotice('已记住')
+      setTimeout(() => setNotice(''), 2000)
+      await load()
+    } catch {
+      setError('grow 调用失败')
+    }
+  }
+
+  // dream：让记忆做一次梦——整合 / 衰减 / 归档
+  async function onDream() {
+    if (dreaming) return
+    setDreaming(true)
+    setNotice('做梦中…')
+    try {
+      await fetch(`${BRIDGE}/dream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      setNotice('梦做完了')
+      await load()
+      setTimeout(() => setNotice(''), 2500)
+    } catch {
+      setNotice('')
+      setError('dream 调用失败')
+    } finally {
+      setDreaming(false)
+    }
+  }
+
   const tiers = (['core', 'long', 'short'] as const).map(t => ({
     key: t,
     ...TIER_META[t],
@@ -274,7 +317,7 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
   ] as const
 
   return (
-    <div style={{ width: '100%', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
+    <div className="safe-screen" style={{ width: '100%', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
       <div className="bg" /><div className="overlay" />
       <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
 
@@ -282,8 +325,12 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
           <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: 'rgba(255,255,255,0.7)', lineHeight: 1 }}>‹</button>
           <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, letterSpacing: 4, color: 'rgba(255,255,255,0.88)' }}>memories</span>
           {tab === 'buckets'
-            ? <button onClick={load} disabled={loading} title="刷新"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'rgba(255,255,255,0.45)', opacity: loading ? 0.3 : 1 }}>↻</button>
+            ? <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <button onClick={onDream} disabled={dreaming || loading} title="做一次梦：整合 / 衰减 / 归档记忆"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, color: 'rgba(200,210,235,0.7)', opacity: dreaming ? 0.4 : 1 }}>☾</button>
+                <button onClick={load} disabled={loading} title="刷新"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'rgba(255,255,255,0.45)', opacity: loading ? 0.3 : 1 }}>↻</button>
+              </div>
             : <span style={{ width: 24 }} />
           }
         </div>
@@ -307,6 +354,14 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 96px', scrollbarWidth: 'none' }}>
 
           {tab === 'buckets' && (<>
+            <AnimatePresence>
+              {notice && (
+                <motion.p initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  style={{ textAlign: 'center', fontSize: 12, letterSpacing: 3, color: 'rgba(200,210,235,0.75)', fontStyle: 'italic', marginBottom: 16 }}>
+                  {notice}
+                </motion.p>
+              )}
+            </AnimatePresence>
             {stats && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 style={{ display: 'flex', justifyContent: 'center', gap: 18, marginBottom: 24, fontSize: 11.5, color: 'rgba(255,255,255,0.45)', letterSpacing: 2, fontStyle: 'italic' }}>
@@ -331,7 +386,7 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <AnimatePresence>
-                      {tier.items.map(b => <BucketCard key={b.id} b={b} onPin={onPin} onDelete={onDelete} />)}
+                      {tier.items.map(b => <BucketCard key={b.id} b={b} onPin={onPin} onDelete={onDelete} onGrow={onGrow} />)}
                     </AnimatePresence>
                   </div>
                 </div>
