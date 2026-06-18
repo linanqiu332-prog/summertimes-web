@@ -77,7 +77,7 @@ export default function Snippets({ onNavigate }: { onNavigate: (p: Page) => void
 
   return (
     <div className="safe-screen" style={{ width: '100%', height: '100dvh', position: 'relative', overflow: 'hidden' }}>
-      <div className="bg" /><div className="overlay" />
+      <div className="bg" /><div className="overlay-dark" />
       <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>
 
         {/* 顶栏 */}

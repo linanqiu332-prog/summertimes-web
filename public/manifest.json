@@ -4,8 +4,8 @@
   "description": "a place to think, remember, and feel",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1a1f24",
-  "theme_color": "#1a1f24",
+  "background_color": "#171311",
+  "theme_color": "#171311",
   "orientation": "portrait",
   "icons": [
     {

@@ -190,7 +190,7 @@ export default function Home({ onNavigate }: { onNavigate: (p: Page) => void }) 
           height: '22%', zIndex: 3,
           display: 'flex', alignItems: 'center',
           padding: '0 20px 24px',
-          background: 'linear-gradient(to top, rgba(50,65,75,0.5), transparent)',
+          background: 'linear-gradient(to top, rgba(20,17,14,0.55), transparent)',
         }}
       >
         <div style={{
