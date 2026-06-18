@@ -1,15 +1,16 @@
 import { motion } from 'framer-motion'
+import Icon, { type IconName } from './Icon'
 
 type Page = 'home' | 'chat' | 'memories' | 'diary' | 'reminders' | 'tokenflow' | 'snippets' | 'letters' | 'persona'
 
-const NAV = [
-  { key: 'home',      icon: '⌂', label: 'home' },
-  { key: 'memories',  icon: '◈', label: 'memories' },
-  { key: 'snippets',  icon: '✦', label: 'snippets' },
-  { key: 'letters',   icon: '✉', label: 'letters' },
-  { key: 'reminders', icon: '◇', label: 'remind' },
-  { key: 'tokenflow', icon: '◎', label: 'tokens' },
-  { key: 'persona',   icon: '◉', label: 'persona' },
+const NAV: { key: string; icon: IconName; label: string }[] = [
+  { key: 'home',      icon: 'home',      label: 'home' },
+  { key: 'memories',  icon: 'memories',  label: 'memories' },
+  { key: 'snippets',  icon: 'snippets',  label: 'snippets' },
+  { key: 'letters',   icon: 'letters',   label: 'letters' },
+  { key: 'reminders', icon: 'reminders', label: 'remind' },
+  { key: 'tokenflow', icon: 'tokens',    label: 'tokens' },
+  { key: 'persona',   icon: 'persona',   label: 'persona' },
 ]
 
 export default function BottomNav({ current, onNavigate }: { current: Page; onNavigate: (p: Page) => void }) {
@@ -17,11 +18,11 @@ export default function BottomNav({ current, onNavigate }: { current: Page; onNa
     <div style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
       zIndex: 100,
-      background: 'rgba(60,75,85,0.45)',
+      background: 'rgba(38,32,28,0.55)',
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',
       borderTop: '0.5px solid rgba(255,255,255,0.1)',
-      padding: '10px 4px calc(16px + env(safe-area-inset-bottom, 0px))',
+      padding: '7px 6px calc(7px + env(safe-area-inset-bottom, 0px))',
     }}>
       <div style={{
         display: 'flex', justifyContent: 'space-around', alignItems: 'center',
@@ -36,21 +37,16 @@ export default function BottomNav({ current, onNavigate }: { current: Page; onNa
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                padding: '4px 8px',
+                padding: '3px 7px',
+                color: active ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.4)',
+                transition: 'color 0.2s',
               }}
             >
-              <span style={{
-                fontSize: 16,
-                color: active ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.38)',
-                transition: 'color 0.2s',
-              }}>
-                {item.icon}
-              </span>
+              <Icon name={item.icon} size={19} />
               <span style={{
                 fontFamily: "'Cormorant Garamond', serif",
                 fontSize: 8, letterSpacing: 1.2,
-                color: active ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)',
-                transition: 'color 0.2s',
+                color: active ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.32)',
               }}>
                 {item.label}
               </span>
@@ -65,21 +61,15 @@ export default function BottomNav({ current, onNavigate }: { current: Page; onNa
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-            padding: '4px 8px',
+            padding: '3px 7px',
+            color: 'rgba(255,255,255,0.4)',
           }}
         >
-          <span style={{
-            fontSize: 16,
-            color: 'rgba(255,255,255,0.38)',
-            transition: 'color 0.2s',
-          }}>
-            ⬡
-          </span>
+          <Icon name="ombre" size={19} />
           <span style={{
             fontFamily: "'Cormorant Garamond', serif",
             fontSize: 8, letterSpacing: 1.2,
-            color: 'rgba(255,255,255,0.3)',
-            transition: 'color 0.2s',
+            color: 'rgba(255,255,255,0.32)',
           }}>
             ombre
           </span>

@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { syncToVPS } from '../sync'
+import Icon, { type IconName } from '../components/Icon'
 type Page = 'home' | 'chat' | 'memories' | 'diary' | 'reminders' | 'tokenflow' | 'snippets' | 'letters' | 'persona'
 
-const NAV = [
-  { key: 'chat', label: 'chat', icon: '✦' },
-  { key: 'memories', label: 'memories', icon: '◈' },
-  { key: 'snippets', label: 'snippets', icon: '✧' },
-  { key: 'letters', label: 'letters', icon: '✉' },
-  { key: 'diary', label: 'diary', icon: '◻' },
-  { key: 'reminders', label: 'reminders', icon: '◇' },
-  { key: 'tokenflow', label: 'token flow', icon: '◎' },
-  { key: 'persona', label: 'persona', icon: '◉' },
+const NAV: { key: string; label: string; icon: IconName }[] = [
+  { key: 'chat', label: 'chat', icon: 'chat' },
+  { key: 'memories', label: 'memories', icon: 'memories' },
+  { key: 'snippets', label: 'snippets', icon: 'snippets' },
+  { key: 'letters', label: 'letters', icon: 'letters' },
+  { key: 'diary', label: 'diary', icon: 'diary' },
+  { key: 'reminders', label: 'reminders', icon: 'reminders' },
+  { key: 'tokenflow', label: 'token flow', icon: 'tokens' },
+  { key: 'persona', label: 'persona', icon: 'persona' },
 ]
 
 const DAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday']
@@ -94,7 +95,7 @@ export default function Home({ onNavigate }: { onNavigate: (p: Page) => void }) 
           position: 'absolute', inset: 0, bottom: '20%',
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
-          zIndex: 2, padding: '0 32px',
+          zIndex: 2, padding: 'env(safe-area-inset-top, 0px) 32px 0',
         }}
       >
         <motion.p
@@ -105,7 +106,7 @@ export default function Home({ onNavigate }: { onNavigate: (p: Page) => void }) 
             fontFamily: "'Cormorant Garamond', serif",
             fontSize: 13, color: 'rgba(255,255,255,0.5)',
             letterSpacing: 4, alignSelf: 'flex-start',
-            marginBottom: 'auto', marginTop: 48,
+            marginBottom: 'auto', marginTop: 20,
           }}
         >
           {time}
@@ -187,10 +188,10 @@ export default function Home({ onNavigate }: { onNavigate: (p: Page) => void }) 
         transition={{ delay: 1, duration: 0.6 }}
         style={{
           position: 'absolute', bottom: 0, left: 0, right: 0,
-          height: '22%', zIndex: 3,
+          zIndex: 3,
           display: 'flex', alignItems: 'center',
-          padding: '0 20px 24px',
-          background: 'linear-gradient(to top, rgba(20,17,14,0.55), transparent)',
+          padding: '24px 18px calc(14px + env(safe-area-inset-bottom, 0px))',
+          background: 'linear-gradient(to top, rgba(20,17,14,0.6), transparent)',
         }}
       >
         <div style={{
@@ -219,15 +220,15 @@ export default function Home({ onNavigate }: { onNavigate: (p: Page) => void }) 
               }}
             >
               <span style={{
-                fontSize: 16,
-                color: active === item.key ? '#3d4a52' : 'rgba(255,255,255,0.8)',
+                display: 'flex',
+                color: active === item.key ? '#3d2f26' : 'rgba(255,255,255,0.82)',
               }}>
-                {item.icon}
+                <Icon name={item.icon} size={18} />
               </span>
               <span style={{
                 fontFamily: "'Cormorant Garamond', serif",
                 fontSize: 11, letterSpacing: 2,
-                color: active === item.key ? '#3d4a52' : 'rgba(255,255,255,0.65)',
+                color: active === item.key ? '#3d2f26' : 'rgba(255,255,255,0.65)',
               }}>
                 {item.label}
               </span>

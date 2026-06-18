@@ -39,19 +39,24 @@ html, body {
   z-index: 1;
 }
 
-/* 副屏遮罩：黑色 75%，把图压暗，内容更清楚 */
+/* 副屏遮罩：竖向渐变 vignette——顶/底压深保证白字可读，中段放浅让室内图透气，
+   不再是一整块死黑。 */
 .overlay-dark {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.75);
+  background: linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.80) 0%,
+    rgba(0,0,0,0.55) 20%,
+    rgba(0,0,0,0.55) 78%,
+    rgba(0,0,0,0.82) 100%
+  );
   z-index: 1;
 }
 
-/* 内容层留出顶部安全区，避免状态栏时钟 / 灵动岛压住页面顶栏。
-   背景层 fixed 已铺满全屏，不受这个 padding 影响。 */
-.safe-screen {
-  padding-top: env(safe-area-inset-top, 0px);
-}
+/* 顶部安全区改由各页顶栏自己 padding 撑（顶栏毛玻璃延进灵动岛区域），
+   这里不再统一加 padding，避免顶栏上方出现一截空黑。 */
+.safe-screen { /* reserved */ }
 
 .glass {
   background: rgba(148,163,172,0.18);

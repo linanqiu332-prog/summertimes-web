@@ -321,7 +321,7 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
       <div className="bg" /><div className="overlay-dark" />
       <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
 
-        <div className="glass" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
+        <div className="glass" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'calc(11px + env(safe-area-inset-top, 0px)) 24px 11px', borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
           <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: 'rgba(255,255,255,0.7)', lineHeight: 1 }}>‹</button>
           <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, letterSpacing: 4, color: 'rgba(255,255,255,0.88)' }}>memories</span>
           {tab === 'buckets'
@@ -336,7 +336,7 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
         </div>
 
         {/* Tab bar */}
-        <div style={{ display: 'flex', gap: 0, padding: '10px 20px 0', borderBottom: '0.5px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ display: 'flex', gap: 0, padding: '6px 20px 0', borderBottom: '0.5px solid rgba(255,255,255,0.08)' }}>
           {TABS.map(t => (
             <button key={t.key} onClick={() => setTab(t.key)} style={{
               background: 'none', border: 'none', cursor: 'pointer',
@@ -351,7 +351,7 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
           ))}
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 96px', scrollbarWidth: 'none' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '14px 18px 84px', scrollbarWidth: 'none' }}>
 
           {tab === 'buckets' && (<>
             <AnimatePresence>
@@ -364,7 +364,7 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
             </AnimatePresence>
             {stats && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                style={{ display: 'flex', justifyContent: 'center', gap: 18, marginBottom: 24, fontSize: 11.5, color: 'rgba(255,255,255,0.45)', letterSpacing: 2, fontStyle: 'italic' }}>
+                style={{ display: 'flex', justifyContent: 'center', gap: 18, marginBottom: 16, fontSize: 11.5, color: 'rgba(255,255,255,0.45)', letterSpacing: 2, fontStyle: 'italic' }}>
                 <span>钉选 {stats.pinned}</span>
                 <span>动态 {stats.dynamic}</span>
                 <span>归档 {stats.archived}</span>
@@ -379,8 +379,8 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
             )}
             {!loading && !error && tiers.map(tier => (
               tier.items.length > 0 && (
-                <div key={tier.key} style={{ marginBottom: 28 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12, paddingLeft: 2 }}>
+                <div key={tier.key} style={{ marginBottom: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 9, paddingLeft: 2 }}>
                     <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, letterSpacing: 3, color: 'rgba(255,255,255,0.85)' }}>{tier.label}</span>
                     <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: 1.5, fontStyle: 'italic' }}>{tier.sub} · {tier.items.length}</span>
                   </div>
