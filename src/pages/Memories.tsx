@@ -42,29 +42,36 @@ function parsePulse(text: string): { stats: Stats; buckets: Bucket[] } {
   const stats: Stats = { pinned: 0, dynamic: 0, archived: 0, size: '' }
   const buckets: Bucket[] = []
 
-  const sp = text.match(/固化记忆桶:\s*(\d+)/)
-  const sd = text.match(/动态记忆桶:\s*(\d+)/)
-  const sa = text.match(/归档记忆桶:\s*(\d+)/)
-  const sz = text.match(/总存储大小:\s*([\d.]+\s*\S+)/)
+  // 表头：兼容 2.3.x「固化桶」与旧版「固化记忆桶」/「总存储大小」
+  const sp = text.match(/固化(?:记忆)?桶[:：]\s*(\d+)/)
+  const sd = text.match(/动态(?:记忆)?桶[:：]\s*(\d+)/)
+  const sa = text.match(/归档(?:记忆)?桶[:：]\s*(\d+)/)
+  const sz = text.match(/总(?:存储大小|占用)[:：]\s*([\d.]+\s*\S+)/)
   if (sp) stats.pinned = +sp[1]
   if (sd) stats.dynamic = +sd[1]
   if (sa) stats.archived = +sa[1]
   if (sz) stats.size = sz[1]
 
-  const lineRe = /^(📌|💭)\s*\[(.+?)\]\s*bucket_id:(\S+)\s*主题:(\S+)\s*情感:V([\d.]+)\/A([\d.]+)\s*重要:(\d+)\s*权重:([\d.]+)\s*标签:(.*)$/
+  // 2.3.x 桶行： 📌 [id] 《名字》 主题:.. 情感:Vx/Ay 重要:n 权重:w 标签:..
+  //   未分类桶的「《名字》」和「标签」都可能缺省
+  const lineRe = /^(📌|💭)\s*\[([^\]]+)\]\s*(?:《(.+?)》)?\s*主题:(.+?)\s+情感:V([\d.]+)\/A([\d.]+)\s+重要:(\d+)\s+权重:([\d.]+)(?:\s+标签:(.*))?$/
   for (const line of text.split('\n')) {
     const m = line.trim().match(lineRe)
     if (!m) continue
+    const topics = m[4].trim()
+    const tags = (m[9] || '').split(',').map(t => t.trim()).filter(Boolean)
+    // 没名字的桶：退而用主题，再退用首个标签，最后兜底
+    const name = m[3]?.trim() || (topics && topics !== '未分类' ? topics : (tags[0] || '未命名片段'))
     buckets.push({
       pinned: m[1] === '📌',
-      name: m[2],
-      id: m[3],
-      topics: m[4],
+      name,
+      id: m[2],
+      topics,
       valence: +m[5],
       arousal: +m[6],
       importance: +m[7],
       weight: +m[8],
-      tags: m[9].split(',').map(t => t.trim()).filter(Boolean),
+      tags,
     })
   }
   return { stats, buckets }

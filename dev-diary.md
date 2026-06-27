@@ -167,3 +167,49 @@ ssh root@45.77.8.147 'cat /opt/summertimes-web/.env && echo "---" && curl -s htt
 3. 精简 system prompt，降低每次请求 token 基线
 4. grow / dream 前端 UI
 5. 历史记录管理：清空按钮 + 消息计数展示
+
+---
+
+## Sprint 7 · 2026-06-19
+
+### 跨设备同步（结 Sprint6 🔴）
+
+根因不是 VPS `.env` 填错，是代码压根没走 nginx：`sync.ts` / `Chat` / `Diary` / `Memories` / `Letters` 全部直接打 `VITE_BRIDGE_URL`（= `localhost:8888`），build 进静态文件后手机浏览器把请求打到自己本地。
+
+新建 `src/bridge.ts`，运行时按 `window.location.hostname` 判断：`localhost`/`127.0.0.1` 直连 `:8888`，其它 host 一律走相对 `/api`（nginx `location /api/ { proxy_pass …:8888/; }` 带尾斜杠会 strip 前缀）。五处全切到 `import { BRIDGE } from './bridge'`。**从此不依赖 VPS `.env` 的值。**
+
+### PWA 顶部黑条（结 Sprint6 🔴）
+
+`.bg` / `.overlay` 从 `position:absolute` 改 `fixed; inset:0`（逃出祖先 `overflow:hidden`，铺满整屏含安全区）；`index.html` 状态栏 `black` → `black-translucent`；九页套 `.safe-screen`；`sw.js` 缓存 v2→v3。**装着的旧 PWA 需删除重装**（iOS 安装时焊死 meta）。
+
+### grow / dream 前端 UI
+
+Memories 记忆桶每张卡加 `＋`（补充内容 → `/grow`），顶栏加 `☾`（整合 → `/dream`），带轻量提示条。
+
+### 聊天历史管理
+
+Chat 搜索面板内加消息总数 + 「清空记录」（本机 + VPS `/history` 一起清）。
+
+### UI 重设计（第一轮，未完）
+
+- **主图**：`.bg` 换本地 `/bg.jpg`（wabi-sabi 暖调室内图，Eve 提供）；body / theme-color / manifest 三处 navy `#1a1f24` → 暖近黑 `#171311`，消除底部安全区蓝黑条。sw 缓存 v3→v4。
+- **副屏蒙版**：新增 `.overlay-dark`，先平铺黑 75%，后改竖向渐变 vignette（顶/底 0.8 压字、中段 0.55 让图透气），八个子页用它，首页保持亮（`.overlay` 暖调 40%）。
+- **统一图标**：新建 `components/Icon.tsx`，零依赖内联 SVG，1.4 细线圆角十枚（home/chat/memories/snippets/letters/diary/reminders/tokens/persona/ombre）。BottomNav 和首页导航替换原先杂乱 glyph（⌂◈✦✉◇◎◉⬡）。
+- **布局收紧**：各页毛玻璃顶栏 padding 改 `calc(11px + env(safe-area-inset-top))` 延进灵动岛、填掉顶部死黑；`.safe-screen` 不再统一加 top padding，改由顶栏自撑，首页内容补 safe-top；BottomNav 底 padding `16px+safe` → `7px+safe`，首页导航去固定 22% 高度改自适应 + 补 safe-area-inset-bottom；Memories（示范页）标签/统计/分层间距各收一档。
+
+### 验证
+
+`tsc -b --noEmit` 全程 exit 0。`vite build` 在沙箱跑不了（node_modules 是 Mac arm64-darwin 原生二进制），VPS / 本机 build 正常。eslint 报的空 `catch`、`Date.now`、effect setState 均为既有问题，且不在 build 链上。图标渲染单独出图核对，十枚风格统一。
+
+### 未解决 / 明日继续 🔴
+
+- **`public/bg.jpg` 待确认**：主图换本地路径，需 Eve 把室内图存为 `~/summertimes-web/public/bg.jpg` 后部署才生效。
+- **页内间距只做了 Memories**：顶栏 / 蒙版 / 导航的全局改动已覆盖所有页，但 Diary / Letters / Reminders / Snippets / Persona / TokenFlow / Chat 的**页内**间距尚未单独收紧，待 Eve 确认 Memories + 首页密度后统一推。
+- **部署待跑**：`cd ~/summertimes-web && bash deploy.sh`（今日曾遇 `.git/HEAD.lock` 死锁，已知 `rm -f` 清掉即可）。
+
+### 下一步
+
+1. 存 `bg.jpg` + 部署，验收首页 / Memories 新密度
+2. 密度 OK 后把页内间距收紧推到其余六页
+3. 精简 system prompt，降 token 基线（Sprint6 遗留）
+4. PWA 重装后复核顶/底安全区表现
