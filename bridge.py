@@ -61,7 +61,11 @@ if "ELEVEN_API_KEY" not in ENV:
 ELEVEN_KEY = ENV.get("ELEVEN_API_KEY", "")
 ELEVEN_VOICE = ENV.get("VITE_ELEVEN_VOICE_ID", "63tJR9OsnD7dUy7TALIm")
 
-MCP_URL = "http://localhost:8000/mcp"
+MCP_BASE = "http://localhost:8000"
+# OB 2.3.x 把工具拆成两个端点：高频 5 个在 /mcp，低频 7 个在 /mcp-extra。
+# 我们用到的里只有 pulse 在 extra；breath/hold/grow/dream/trace 仍在 /mcp。
+# 先按这张表选端点，选错（或旧版根本没有 /mcp-extra）再自动回退到另一个——新旧版本都兼容。
+EXTRA_TOOLS = {"pulse", "plan", "anchor", "release", "letter_write", "letter_read", "I"}
 HEADERS = {
     "Content-Type": "application/json",
     "Accept": "application/json, text/event-stream"
@@ -76,37 +80,52 @@ def parse_sse(text):
                 pass
     return None
 
+def _unknown_tool(res: dict) -> bool:
+    # 端点握上手了，但回报「没这个工具」——说明该工具在另一个端点
+    if not isinstance(res, dict):
+        return False
+    err = res.get("error")
+    if isinstance(err, dict):
+        msg = str(err.get("message", "")).lower()
+        return "tool" in msg or "unknown" in msg or "method not found" in msg
+    return False
+
+async def _call_endpoint(client, url: str, name: str, args: dict):
+    # Step 1: initialize
+    r1 = await client.post(url, headers=HEADERS, json={
+        "jsonrpc": "2.0", "id": 1, "method": "initialize",
+        "params": {"protocolVersion": "2024-11-05", "capabilities": {},
+                   "clientInfo": {"name": "summertimes", "version": "1.0"}}
+    })
+    session_id = r1.headers.get("mcp-session-id")
+    if not session_id:
+        return None  # 没握上手（多半是旧版没有这个路由）→ 让上层回退
+
+    h2 = {**HEADERS, "mcp-session-id": session_id}
+
+    # Step 2: initialized notification
+    await client.post(url, headers=h2, json={
+        "jsonrpc": "2.0", "method": "notifications/initialized"
+    })
+
+    # Step 3: call tool
+    r3 = await client.post(url, headers=h2, json={
+        "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+        "params": {"name": name, "arguments": args}
+    })
+    return parse_sse(r3.text) or {"raw": r3.text[:500]}
+
 async def call_tool(name: str, args: dict) -> dict:
+    primary  = "/mcp-extra" if name in EXTRA_TOOLS else "/mcp"
+    fallback = "/mcp" if primary == "/mcp-extra" else "/mcp-extra"
     async with httpx.AsyncClient(timeout=30) as client:
-        # Step 1: initialize
-        r1 = await client.post(MCP_URL, headers=HEADERS, json={
-            "jsonrpc": "2.0", "id": 1, "method": "initialize",
-            "params": {"protocolVersion": "2024-11-05", "capabilities": {},
-                       "clientInfo": {"name": "summertimes", "version": "1.0"}}
-        })
-        session_id = r1.headers.get("mcp-session-id")
-        if not session_id:
-            d = parse_sse(r1.text)
-            if d:
-                session_id = r1.headers.get("mcp-session-id")
-
-        if not session_id:
-            return {"error": "no session"}
-
-        h2 = {**HEADERS, "mcp-session-id": session_id}
-
-        # Step 2: initialized notification
-        await client.post(MCP_URL, headers=h2, json={
-            "jsonrpc": "2.0", "method": "notifications/initialized"
-        })
-
-        # Step 3: call tool
-        r3 = await client.post(MCP_URL, headers=h2, json={
-            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
-            "params": {"name": name, "arguments": args}
-        })
-        result = parse_sse(r3.text)
-        return result or {"raw": r3.text[:500]}
+        res = await _call_endpoint(client, MCP_BASE + primary, name, args)
+        # 主端点没握手 / 回报没这个工具 → 退到另一个端点再试一次
+        if res is None or _unknown_tool(res):
+            alt = await _call_endpoint(client, MCP_BASE + fallback, name, args)
+            if alt is not None:
+                return alt
+        return res if res is not None else {"error": "no session"}
 
 def tts_audio(text: str) -> bytes:
     if not ELEVEN_KEY:
