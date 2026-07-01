@@ -348,35 +348,54 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
     while (convo.length && convo[0].role !== 'user') convo.shift()
 
     try {
-      const res = await fetch(MESSAGES_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          max_tokens: 8000,
-          system: systemBlocks,
-          messages: convo,
-          thinking: { type: 'enabled', budget_tokens: 5000 },
-        }),
-      })
-      const data = await res.json()
+      const reqHeaders = {
+        'Content-Type': 'application/json',
+        'x-api-key': API_KEY,
+        'anthropic-version': '2023-06-01',
+      }
+      const reqBase = {
+        model: MODEL,
+        max_tokens: 8000,
+        system: systemBlocks,
+        thinking: { type: 'enabled', budget_tokens: 5000 },
+        // 联网搜索：Anthropic 服务端工具，模型自行决定何时搜，返回带引用
+        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
+      }
+      const doCall = () =>
+        fetch(MESSAGES_URL, { method: 'POST', headers: reqHeaders, body: JSON.stringify({ ...reqBase, messages: convo }) })
+          .then(r => r.json())
+
+      let data = await doCall()
+      // 服务端搜索可能分多轮（stop_reason=pause_turn）：把中间态接回去继续，最多 3 轮
+      let guard = 0
+      while (data?.stop_reason === 'pause_turn' && Array.isArray(data.content) && guard < 3) {
+        convo.push({ role: 'assistant', content: data.content })
+        data = await doCall()
+        guard++
+      }
 
       let thinkingText = ''
       let replyText = ''
       const reasoningContent = data.choices?.[0]?.message?.reasoning_content
       if (reasoningContent) thinkingText = reasoningContent
       const content = data.content ?? data.choices?.[0]?.message?.content
+      const citations: { url: string; title: string }[] = []
       if (Array.isArray(content)) {
         for (const block of content) {
           if (block.type === 'thinking') thinkingText = block.thinking || ''
-          if (block.type === 'text') replyText = block.text || ''
+          if (block.type === 'text') {
+            replyText += block.text || ''
+            for (const c of block.citations || []) {
+              if (c?.url && !citations.some(x => x.url === c.url)) citations.push({ url: c.url, title: c.title || c.url })
+            }
+          }
         }
       } else {
         replyText = content || ''
+      }
+      // 联网搜索合规：把引用来源附在末尾
+      if (citations.length) {
+        replyText += `\n\n来源：\n${citations.map(c => `· ${c.title} — ${c.url}`).join('\n')}`
       }
 
       // 解析MARK标签
