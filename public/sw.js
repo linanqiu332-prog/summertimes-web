@@ -1,4 +1,4 @@
-const CACHE = 'summertimes-v4'
+const CACHE = 'summertimes-v5'
 const PRECACHE = ['/', '/index.html']
 
 self.addEventListener('install', e => {
