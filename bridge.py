@@ -127,6 +127,33 @@ async def call_tool(name: str, args: dict) -> dict:
                 return alt
         return res if res is not None else {"error": "no session"}
 
+def web_search(query: str, n: int = 5) -> list:
+    # DuckDuckGo 搜索。懒导入：库没装也不至于让整个 bridge 起不来。
+    if not query:
+        return []
+    DDGS = None
+    try:
+        from ddgs import DDGS as _D
+        DDGS = _D
+    except Exception:
+        try:
+            from duckduckgo_search import DDGS as _D
+            DDGS = _D
+        except Exception:
+            return [{"title": "", "url": "", "snippet": "搜索库未安装：在 VPS 上 pip install ddgs"}]
+    try:
+        out = []
+        with DDGS() as d:
+            for r in d.text(query, max_results=n):
+                out.append({
+                    "title": r.get("title", ""),
+                    "url": r.get("href") or r.get("url", ""),
+                    "snippet": r.get("body", ""),
+                })
+        return out
+    except Exception as e:
+        return [{"title": "", "url": "", "snippet": f"搜索失败: {e}"}]
+
 def tts_audio(text: str) -> bytes:
     if not ELEVEN_KEY:
         return b""
@@ -239,6 +266,8 @@ class Handler(BaseHTTPRequestHandler):
                 "read": body.get("read", False),
                 "limit": body.get("limit", 20)
             }))
+        elif self.path == "/search":
+            result = {"results": web_search(body.get("query", ""), int(body.get("n", 5)))}
         elif self.path == "/trace":
             args = {"bucket_id": body.get("bucket_id", "")}
             # 只传前端给了的字段，没给的不传（trace 的约定：不传=不改）

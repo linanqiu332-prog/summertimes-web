@@ -344,7 +344,8 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
     ]
 
     // 原生 Messages 接口要求首条是 user：去掉窗口开头的 assistant 消息
-    const convo = newMessages.slice(-30).map(m => ({ role: m.role, content: m.text }))
+    const convo: { role: string; content: unknown }[] =
+      newMessages.slice(-30).map(m => ({ role: m.role, content: m.text as unknown }))
     while (convo.length && convo[0].role !== 'user') convo.shift()
 
     try {
@@ -358,18 +359,48 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
         max_tokens: 8000,
         system: systemBlocks,
         thinking: { type: 'enabled', budget_tokens: 5000 },
-        // 联网搜索：Anthropic 服务端工具，模型自行决定何时搜，返回带引用
-        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
+        // 自定义联网搜索工具（Bedrock 支持自定义工具；不用 Anthropic 服务端 web_search）
+        tools: [{
+          name: 'web_search',
+          description: '联网搜索实时/最新信息。当问题涉及当前时间、新闻、天气、价格，或超出你训练知识的内容时调用它。',
+          input_schema: {
+            type: 'object',
+            properties: { query: { type: 'string', description: '搜索关键词' } },
+            required: ['query'],
+          },
+        }],
       }
       const doCall = () =>
         fetch(MESSAGES_URL, { method: 'POST', headers: reqHeaders, body: JSON.stringify({ ...reqBase, messages: convo }) })
           .then(r => r.json())
 
+      const sources: { url: string; title: string }[] = []
       let data = await doCall()
-      // 服务端搜索可能分多轮（stop_reason=pause_turn）：把中间态接回去继续，最多 3 轮
+      // 工具循环：模型要搜 → 我们调 bridge/search → 把结果喂回去 → 继续，最多 3 轮
       let guard = 0
-      while (data?.stop_reason === 'pause_turn' && Array.isArray(data.content) && guard < 3) {
-        convo.push({ role: 'assistant', content: data.content })
+      while (data?.stop_reason === 'tool_use' && Array.isArray(data.content) && guard < 3) {
+        convo.push({ role: 'assistant', content: data.content })  // 原样保留（含 thinking + tool_use）
+        const toolResults: unknown[] = []
+        for (const block of data.content) {
+          if (block.type === 'tool_use' && block.name === 'web_search') {
+            let text = '没有结果'
+            try {
+              const r = await fetch(`${BRIDGE}/search`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: block.input?.query || '', n: 5 }),
+              })
+              const d = await r.json()
+              const results: { title: string; url: string; snippet: string }[] = Array.isArray(d?.results) ? d.results : []
+              if (results.length) {
+                text = results.map((x, i) => `${i + 1}. ${x.title}\n${x.url}\n${x.snippet}`).join('\n\n')
+                for (const x of results) if (x.url && !sources.some(s => s.url === x.url)) sources.push({ url: x.url, title: x.title || x.url })
+              }
+            } catch { text = '搜索失败' }
+            toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: text })
+          }
+        }
+        convo.push({ role: 'user', content: toolResults })
         data = await doCall()
         guard++
       }
@@ -379,23 +410,17 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
       const reasoningContent = data.choices?.[0]?.message?.reasoning_content
       if (reasoningContent) thinkingText = reasoningContent
       const content = data.content ?? data.choices?.[0]?.message?.content
-      const citations: { url: string; title: string }[] = []
       if (Array.isArray(content)) {
         for (const block of content) {
           if (block.type === 'thinking') thinkingText = block.thinking || ''
-          if (block.type === 'text') {
-            replyText += block.text || ''
-            for (const c of block.citations || []) {
-              if (c?.url && !citations.some(x => x.url === c.url)) citations.push({ url: c.url, title: c.title || c.url })
-            }
-          }
+          if (block.type === 'text') replyText += block.text || ''
         }
       } else {
         replyText = content || ''
       }
-      // 联网搜索合规：把引用来源附在末尾
-      if (citations.length) {
-        replyText += `\n\n来源：\n${citations.map(c => `· ${c.title} — ${c.url}`).join('\n')}`
+      // 用到搜索时把来源附在末尾
+      if (sources.length) {
+        replyText += `\n\n来源：\n${sources.map(s => `· ${s.title} — ${s.url}`).join('\n')}`
       }
 
       // 解析MARK标签
