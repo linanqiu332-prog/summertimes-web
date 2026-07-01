@@ -8,6 +8,8 @@ type Page = 'home' | 'chat' | 'memories' | 'diary' | 'reminders' | 'tokenflow' |
 
 const API_KEY = import.meta.env.VITE_API_KEY
 const API_URL = import.meta.env.VITE_API_URL
+// Anthropic 原生 Messages 接口（prompt caching 只在这条上生效，/chat/completions 不支持）
+const MESSAGES_URL = (API_URL || '').replace(/\/chat\/completions\/?$/, '/messages')
 const MODEL = 'claude-sonnet-4-6'
 const STORAGE_KEY = 'summertimes_messages'
 
@@ -328,23 +330,36 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
       }).join('\n')
     } catch { /* noop */ }
 
+    // 整块 system 作为缓存前缀：persona + 工具说明 + Eve 自述 + 纪念日 + 记忆。
+    // 稳定前缀太短过不了 2048 token 门槛，记忆那坨才够大——所以整块一起缓存。
+    // memory 每 3 条消息才刷新 → 约 2/3 请求命中（read 0.1x），刷新那次重写（1.25x）。
     let systemPrompt = `${getPersona()}\n\n${TOOLS_SYSTEM}`
     const evePersona = getEvePersona()
     if (evePersona) systemPrompt += `\n\nEve的自述（她自己写的）：\n${evePersona}`
     if (dateLines) systemPrompt += `\n\n今天的纪念日与倒计时（已按今天日期算好）：\n${dateLines}`
     if (currentMemory) systemPrompt += `\n\n以下是关于Eve的记忆：\n${currentMemory}`
 
+    const systemBlocks = [
+      { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } as const },
+    ]
+
+    // 原生 Messages 接口要求首条是 user：去掉窗口开头的 assistant 消息
+    const convo = newMessages.slice(-30).map(m => ({ role: m.role, content: m.text }))
+    while (convo.length && convo[0].role !== 'user') convo.shift()
+
     try {
-      const res = await fetch(API_URL, {
+      const res = await fetch(MESSAGES_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
         body: JSON.stringify({
           model: MODEL,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            ...newMessages.slice(-30).map(m => ({ role: m.role, content: m.text })),
-          ],
           max_tokens: 8000,
+          system: systemBlocks,
+          messages: convo,
           thinking: { type: 'enabled', budget_tokens: 5000 },
         }),
       })
@@ -354,7 +369,7 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
       let replyText = ''
       const reasoningContent = data.choices?.[0]?.message?.reasoning_content
       if (reasoningContent) thinkingText = reasoningContent
-      const content = data.choices?.[0]?.message?.content
+      const content = data.content ?? data.choices?.[0]?.message?.content
       if (Array.isArray(content)) {
         for (const block of content) {
           if (block.type === 'thinking') thinkingText = block.thinking || ''
