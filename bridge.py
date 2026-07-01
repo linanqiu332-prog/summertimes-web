@@ -225,6 +225,20 @@ class Handler(BaseHTTPRequestHandler):
             }))
         elif self.path == "/dream":
             result = asyncio.run(call_tool("dream", {}))
+        elif self.path == "/plan":
+            result = asyncio.run(call_tool("plan", {
+                "content": body.get("content", ""),
+                "status": body.get("status", "active"),
+                "weight": body.get("weight", 0.5),
+                "why_remembered": body.get("why_remembered", "")
+            }))
+        elif self.path == "/I":
+            result = asyncio.run(call_tool("I", {
+                "content": body.get("content", ""),
+                "aspect": body.get("aspect", ""),
+                "read": body.get("read", False),
+                "limit": body.get("limit", 20)
+            }))
         elif self.path == "/trace":
             args = {"bucket_id": body.get("bucket_id", "")}
             # 只传前端给了的字段，没给的不传（trace 的约定：不传=不改）

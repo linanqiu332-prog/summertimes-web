@@ -213,3 +213,55 @@ Chat 搜索面板内加消息总数 + 「清空记录」（本机 + VPS `/histor
 2. 密度 OK 后把页内间距收紧推到其余六页
 3. 精简 system prompt，降 token 基线（Sprint6 遗留）
 4. PWA 重装后复核顶/底安全区表现
+
+---
+
+## Sprint 8 · 2026-06-28
+
+### 安全：OmbreBrain API key 轮换
+
+旧 `OMBRE_API_KEY`（`sk-0ed6…`）在排查时暴露，已在供应商侧删除并换新 key。
+
+排查发现一个坑：key 不是从 `.env` 读的，而是**硬写在 `/opt/ombre-brain/docker-compose.yml` 的 `environment:` 块里**。所以早先 `sed .env` + 重启完全不生效——compose 每次 `up` 都把 YAML 里的字面值重新塞进容器。正确做法：直接改 compose 里那行，`docker compose down && up -d`，`docker inspect` 确认新 key 生效。期间容器一度仍跑旧（已删）key，OB 的 LLM 脱水调用会 401，换完恢复。
+
+### OmbreBrain 引擎升级（6 工具 → 12 工具，v2.3.18）
+
+上游大改：工具从 6 个扩到 12 个，新增 `anchor`/`release`（坐标系）、`plan`（承诺）、`letter_write`/`letter_read`（原生信）、`I`（自我认知）；基建多了 Dashboard 热填 key、内置 Cloudflare Tunnel、HTTPS `/mcp` 强制 OAuth、本地 bge-m3 向量化、历史导入。
+
+升级前摸底：compose 管理，记忆 bind 在宿主机 `/opt/ombre-brain/buckets`（58 桶），匿名 volume `/app/buckets` 是镜像默认空目录、不碰。
+
+操作（全在 VPS）：
+1. 备份 `tar czf ~/buckets-backup-*.tgz -C /opt/ombre-brain/buckets .`，记录回滚镜像 `sha256:b63cdbbe…`。
+2. compose 加 `OMBRE_MCP_REQUIRE_AUTH=false`——**关键**：新版对 HTTPS `/mcp` 默认强制 OAuth，不关的话 Claude Desktop（连的就是 `https://ombre.summertimes.app/mcp`）会被 401 卡死。
+3. `docker compose pull && up -d`。
+
+验证全绿：`buckets:58`（一条没丢）、`decay_engine` 从 `stopped` → `running`（新版自动开了衰减）、`breath`(/mcp) 与 `pulse`(/mcp-extra) 双端点都吐内容。
+
+### bridge.py 双端点路由 + 回退
+
+新版把 12 工具拆成 `/mcp`（高频 5：breath/hold/grow/dream/trace）+ `/mcp-extra`（低频 7：含 pulse）。`bridge.py` 原先写死 `MCP_URL=…/mcp`，升级后 `pulse` 会 404。
+
+改法：加 `EXTRA_TOOLS` 集合按工具名选端点，`call_tool` 主端点没握手 / 回报「没这个工具」时**自动回退到另一个端点**——新旧 OB 都兼容、升级期间 pulse 零中断。拆出 `_call_endpoint` / `_unknown_tool`。`py_compile` 通过。
+
+部署用 Phase A 解耦法：Mac 选择性 `git add bridge.py` 提交推送 → VPS `git pull && systemctl restart bridge`（只更 bridge、不重建前端，避开还没存 `bg.jpg` 的问题）。在**旧** OB 上验证 pulse 经回退仍通。
+
+### parsePulse 重写（适配新格式）
+
+新版 pulse 文本几乎全改：`固化记忆桶`→`固化桶`、`总存储大小`→`总占用`、桶行 `[名字] bucket_id:xxx`→`[id] 《名字》`，并多出大量未命名桶和 `=== feel ===` 段。旧正则全不匹配，升级后 Memories 会解析不出桶。
+
+`Memories.tsx` 的 `parsePulse` 用新正则重写：表头用 `固化(?:记忆)?桶` 之类兼容新旧；桶行 `《名字》` 与 `标签` 都设为可选；未命名桶用「主题 → 首个标签 → 兜底」命名。`tsc` 通过。**随下次前端完整部署上线。**
+
+### Claude Desktop 现状
+
+配置 URL 指向 `https://ombre.summertimes.app/mcp`（公网 HTTPS，Mac 关机也能用）。升级后该端点只剩 5 个高频工具；`pulse` 及 7 个低频（含 `I`/`plan`/原生 letters）在 `/mcp-extra`，Claude Desktop 暂用不上。pulse 是低频自检工具，日常几乎无影响。
+
+### 概念澄清（衰减 / token）
+
+`breath` 注入 system prompt 的记忆按 **token 预算截断**，桶数多少不涨聊天 token；`pulse`（全量列表）只有 Memories 页读，不进聊天。衰减的作用不是省 token，是让浮现的记忆保持新鲜相关。
+
+### 未解决 / 下一步 🔴
+
+- **前端完整部署待跑**：需先存 `~/summertimes-web/public/bg.jpg`，再 Mac 上 `bash deploy.sh`，一次带上 Sprint7 UI + parsePulse 修复。部署前线上 Memories 仍是旧解析器、配新引擎会显示不出桶。
+- **回滚预案**：compose 把镜像换成 `sha256:b63cdbbe…` 重建即可回旧版；buckets 有 `~/buckets-backup-*.tgz` 兜底。
+- **可选**：nginx 加 `/mcp-extra` 反代 + Claude Desktop 加第二连接器 → 补全 12 工具（尤其 `I`/`plan`）。
+- **安全**：公网 `/mcp` 现为无鉴权敞开（关了 OAuth）。哪天收紧走 OAuth 或 Cloudflare Access。

@@ -221,12 +221,46 @@ function LettersTab() {
   )
 }
 
+function SelfTab() {
+  const [text, setText] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch(`${BRIDGE}/I`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ read: true, limit: 50 }),
+        })
+        const d = await r.json()
+        setText(d?.result?.content?.[0]?.text || '')
+      } catch {} finally { setLoading(false) }
+    })()
+  }, [])
+
+  if (loading) return (
+    <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontStyle: 'italic', fontSize: 14, marginTop: 60, letterSpacing: 2 }}>读取中…</p>
+  )
+  if (!text.trim()) return (
+    <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', fontSize: 14, marginTop: 60, letterSpacing: 2, lineHeight: 2 }}>
+      他还没写下关于自己的认识
+    </p>
+  )
+  return (
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+      className="glass" style={{ borderRadius: 16, padding: '16px 18px' }}>
+      <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14.5, color: 'rgba(255,255,255,0.82)', lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>{text}</p>
+    </motion.div>
+  )
+}
+
 export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void }) {
   const [buckets, setBuckets] = useState<Bucket[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState<'buckets' | 'snippets' | 'letters'>('buckets')
+  const [tab, setTab] = useState<'buckets' | 'snippets' | 'letters' | 'self'>('buckets')
   const [dreaming, setDreaming] = useState(false)
   const [notice, setNotice] = useState('')
 
@@ -321,6 +355,7 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
     { key: 'buckets',  label: '记忆桶' },
     { key: 'snippets', label: 'snippets' },
     { key: 'letters',  label: 'letters' },
+    { key: 'self',     label: '自我' },
   ] as const
 
   return (
@@ -403,6 +438,7 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
 
           {tab === 'snippets' && <SnippetsTab />}
           {tab === 'letters'  && <LettersTab />}
+          {tab === 'self'     && <SelfTab />}
 
         </div>
       </div>
