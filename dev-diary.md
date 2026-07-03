@@ -265,3 +265,32 @@ Chat 搜索面板内加消息总数 + 「清空记录」（本机 + VPS `/histor
 - **回滚预案**：compose 把镜像换成 `sha256:b63cdbbe…` 重建即可回旧版；buckets 有 `~/buckets-backup-*.tgz` 兜底。
 - **可选**：nginx 加 `/mcp-extra` 反代 + Claude Desktop 加第二连接器 → 补全 12 工具（尤其 `I`/`plan`）。
 - **安全**：公网 `/mcp` 现为无鉴权敞开（关了 OAuth）。哪天收紧走 OAuth 或 Cloudflare Access。
+
+---
+
+## Sprint 9 · 2026-07-01～02
+
+### I / plan 接进 app
+
+`bridge.py` 加 `/I`、`/plan` 端点（call_tool 已把二者路由到 /mcp-extra）。Chat.tsx 仿 MARK/LETTER 加两个标签：`[[I: 维度 | 内容]]`（自我认知）、`[[PLAN: 内容]]`（承诺），send 里解析后 POST 到 bridge、标签从展示文本剥掉；system prompt 告知这两个能力。Memories 新增「自我」tab，读 `I(read=true)` 展示。
+
+### Claude Desktop 补全 12 工具
+
+镜像是拆分版：`/mcp` 只有 5（breath/hold/grow/dream/trace），另 7 在 `/mcp-extra`。VPS nginx 照 `/mcp` 加了一段 `/mcp-extra` 反代（无 auth，最长前缀匹配不冲突）；Claude Desktop `claude_desktop_config.json` 加第二连接器 `ombre-brain-extra` → `https://ombre.summertimes.app/mcp-extra`（mcp-remote）。⌘Q 重开后 12 工具齐。
+
+### Prompt caching（降 token，无损）
+
+apiyi 缓存**只在 Anthropic 原生 `/v1/messages` 生效**，`/chat/completions` 不支持。Chat.tsx 主对话从 OpenAI 格式切到原生：`x-api-key` + `anthropic-version`，`system` 用 block 数组、整块挂 `cache_control: ephemeral`（persona 太短过不了 2048 门槛，连记忆一起缓存才够大；记忆每 3 条才刷新→约 2/3 命中）。原生要求首条 message 是 user，做了 trim。响应解析改读 `data.content`。实测 `⚡cache` 有数字=命中。信件子调用和其它页仍走 OpenAI 接口。
+
+### 联网搜索（自建，DuckDuckGo）
+
+Anthropic 服务端 `web_search` 工具在 apiyi 走不通——apiyi **默认通道是 AWS Bedrock**（响应 id `msg_bdrk_`），官方通道只自动兜底、不可主动指定，而 **Bedrock 不支持服务端工具**。改自建：`bridge.py` 加 `/search`（`ddgs` 库，懒导入防崩），Chat.tsx 用**自定义 `web_search` 工具**（Bedrock 支持自定义工具）+ tool_use 循环（最多 3 轮）：模型 tool_use → bridge 搜 → tool_result 喂回 → 续答，末尾附来源。thinking 块原样回传保签名。VPS 需 `pip3 install ddgs --break-system-packages`。sw 缓存 v4→v5。
+
+坑：调试时先在 Claude Desktop 里测（英文 thinking + 看到 memory 工具）以为没生效，其实搜索只在 app；且前端要重新 deploy + PWA 重装才吃到新代码。
+
+### 未解决 / 下一步 🔴
+
+- 其余六页页内间距收紧（Sprint7 遗留，只做了 Memories）。
+- 想让 Claude Desktop 也能联网 → 需另加一个搜索类 MCP 连接器。
+- 手机本地能力（闹钟/Health）→ 走 iOS 捷径 + deep link；屏幕使用时间基本拿不到。
+- 公网 `/mcp`/`/mcp-extra` 无鉴权，待收紧。
