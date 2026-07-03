@@ -317,7 +317,39 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
       const m = await breath(text)
       if (m) { currentMemory = m; setMemory(m) }
     }
+    try {
+      const reply = await generateReply(newMessages, currentMemory)
+      setMessages(p => { const updated = [...p, reply]; saveRemoteHistory(updated); return updated })
+      if (msgCountRef.current % 5 === 0) hold(`Eve说：${text}\nClaude回：${reply.text}`, 'summertimes,对话')
+    } catch {
+      setMessages(p => [...p, { id: Date.now(), role: 'assistant', text: '网络错误，再试一次。' }])
+    } finally {
+      setLoading(false)
+    }
+  }
 
+  // 重说：丢掉某条 assistant 回复（及其之后），基于之前的历史重新生成
+  async function regenerate(id: number) {
+    if (loading) return
+    const idx = messages.findIndex(m => m.id === id)
+    if (idx < 0 || messages[idx].role !== 'assistant') return
+    const history = messages.slice(0, idx)
+    if (!history.some(m => m.role === 'user')) return
+    const prev = messages
+    setMessages(history)
+    setLoading(true)
+    try {
+      const reply = await generateReply(history, memory)
+      setMessages(p => { const updated = [...p, reply]; saveRemoteHistory(updated); return updated })
+    } catch {
+      setMessages(prev)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 生成一条回复：请求模型 + 工具循环 + 解析 + 记账 + 标签，返回 assistant 消息（异常向上抛）
+  async function generateReply(history: Message[], memoryText: string): Promise<Message> {
     // 倒计时/纪念日：从首页同一份 localStorage 读，算成"今天"的数字注入
     let dateLines = ''
     try {
@@ -337,7 +369,7 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
     const evePersona = getEvePersona()
     if (evePersona) systemPrompt += `\n\nEve的自述（她自己写的）：\n${evePersona}`
     if (dateLines) systemPrompt += `\n\n今天的纪念日与倒计时（已按今天日期算好）：\n${dateLines}`
-    if (currentMemory) systemPrompt += `\n\n以下是关于Eve的记忆：\n${currentMemory}`
+    if (memoryText) systemPrompt += `\n\n以下是关于Eve的记忆：\n${memoryText}`
 
     const systemBlocks = [
       { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } as const },
@@ -345,11 +377,10 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
 
     // 原生 Messages 接口要求首条是 user：去掉窗口开头的 assistant 消息
     const convo: { role: string; content: unknown }[] =
-      newMessages.slice(-30).map(m => ({ role: m.role, content: m.text as unknown }))
+      history.slice(-30).map(m => ({ role: m.role, content: m.text as unknown }))
     while (convo.length && convo[0].role !== 'user') convo.shift()
 
-    try {
-      const reqHeaders = {
+    const reqHeaders = {
         'Content-Type': 'application/json',
         'x-api-key': API_KEY,
         'anthropic-version': '2023-06-01',
@@ -370,9 +401,21 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
           },
         }],
       }
-      const doCall = () =>
-        fetch(MESSAGES_URL, { method: 'POST', headers: reqHeaders, body: JSON.stringify({ ...reqBase, messages: convo }) })
-          .then(r => r.json())
+      // 请求失败（超时/网关错误/非 JSON）自动重试一次，吃掉偶发抖动
+      const doCall = async () => {
+        let lastErr: unknown
+        for (let i = 0; i < 2; i++) {
+          try {
+            const r = await fetch(MESSAGES_URL, { method: 'POST', headers: reqHeaders, body: JSON.stringify({ ...reqBase, messages: convo }) })
+            if (!r.ok) throw new Error(`HTTP ${r.status}`)
+            return await r.json()
+          } catch (e) {
+            lastErr = e
+            if (i === 0) await new Promise(res => setTimeout(res, 900))
+          }
+        }
+        throw lastErr
+      }
 
       const sources: { url: string; title: string }[] = []
       let data = await doCall()
@@ -475,20 +518,7 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
       const newMsg: Message = { id: Date.now(), role: 'assistant', text: cleanText || '...' }
       if (thinkingText) newMsg.thinking = thinkingText
       if (marked) newMsg.marked = marked.quote
-      setMessages(p => {
-        const updated = [...p, newMsg]
-        saveRemoteHistory(updated)
-        return updated
-      })
-
-      if (msgCountRef.current % 5 === 0) {
-        hold(`Eve说：${text}\nClaude回：${cleanText}`, 'summertimes,对话')
-      }
-    } catch {
-      setMessages(p => [...p, { id: Date.now(), role: 'assistant', text: '网络错误，再试一次。' }])
-    } finally {
-      setLoading(false)
-    }
+      return newMsg
   }
 
   function handleKey(e: React.KeyboardEvent) {
@@ -559,13 +589,20 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
                     <div className="glass" style={{ borderRadius: 18, borderBottomLeftRadius: 4, padding: '10px 15px' }}>
                       <p style={{ fontSize: 15, lineHeight: 1.75, color: 'rgba(255,255,255,0.9)' }}>{m.text}</p>
                     </div>
-                    <button onClick={() => speak(m)} title="听他说"
-                      style={{ marginTop: 6, marginLeft: 4, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: playingId === m.id ? 'rgba(200,225,215,0.9)' : 'rgba(255,255,255,0.4)', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 5, padding: 0 }}>
-                      {loadingId === m.id ? '◌' : playingId === m.id ? '◼' : '▶'}
-                      <span style={{ fontSize: 10.5, fontStyle: 'italic', fontFamily: "'Cormorant Garamond', serif" }}>
-                        {loadingId === m.id ? '…' : playingId === m.id ? 'playing' : 'listen'}
-                      </span>
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 6, marginLeft: 4 }}>
+                      <button onClick={() => speak(m)} title="听他说"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: playingId === m.id ? 'rgba(200,225,215,0.9)' : 'rgba(255,255,255,0.4)', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 5, padding: 0 }}>
+                        {loadingId === m.id ? '◌' : playingId === m.id ? '◼' : '▶'}
+                        <span style={{ fontSize: 10.5, fontStyle: 'italic', fontFamily: "'Cormorant Garamond', serif" }}>
+                          {loadingId === m.id ? '…' : playingId === m.id ? 'playing' : 'listen'}
+                        </span>
+                      </button>
+                      <button onClick={() => regenerate(m.id)} disabled={loading} title="重说"
+                        style={{ background: 'none', border: 'none', cursor: loading ? 'default' : 'pointer', fontSize: 13, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 5, padding: 0, opacity: loading ? 0.4 : 1 }}>
+                        ↻
+                        <span style={{ fontSize: 10.5, fontStyle: 'italic', fontFamily: "'Cormorant Garamond', serif" }}>重说</span>
+                      </button>
+                    </div>
                     {m.marked && (
                       <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
                         style={{ marginTop: 6, padding: '6px 12px', background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
