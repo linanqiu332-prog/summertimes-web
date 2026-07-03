@@ -82,9 +82,9 @@ export default function Snippets({ onNavigate }: { onNavigate: (p: Page) => void
 
         {/* 顶栏 */}
         <div className="glass" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'calc(11px + env(safe-area-inset-top, 0px)) 24px 11px', borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
-          <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: 'rgba(255,255,255,0.7)', lineHeight: 1 }}>‹</button>
-          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, letterSpacing: 4, color: 'rgba(255,255,255,0.88)' }}>snippets</span>
-          <button onClick={() => setShowForm(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: 'rgba(255,255,255,0.7)' }}>+</button>
+          <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: 'rgba(var(--ink),0.7)', lineHeight: 1 }}>‹</button>
+          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, letterSpacing: 4, color: 'rgba(var(--ink),0.88)' }}>snippets</span>
+          <button onClick={() => setShowForm(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: 'rgba(var(--ink),0.7)' }}>+</button>
         </div>
 
         {/* 新建表单 */}
@@ -96,26 +96,26 @@ export default function Snippets({ onNavigate }: { onNavigate: (p: Page) => void
                 value={quote} onChange={e => setQuote(e.target.value)}
                 placeholder="粘贴那句打到你的话…"
                 rows={3}
-                style={{ width: '100%', background: 'rgba(255,255,255,0.08)', border: '0.5px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '10px 12px', fontFamily: "'Cormorant Garamond', serif", fontSize: 15, color: 'rgba(255,255,255,0.88)', outline: 'none', resize: 'none', lineHeight: 1.7 }}
+                style={{ width: '100%', background: 'rgba(var(--ink),0.08)', border: '0.5px solid rgba(var(--ink),0.15)', borderRadius: 10, padding: '10px 12px', fontFamily: "'Cormorant Garamond', serif", fontSize: 15, color: 'rgba(var(--ink),0.88)', outline: 'none', resize: 'none', lineHeight: 1.7 }}
               />
               <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                 {(['eve', 'claude'] as const).map(f => (
                   <button key={f} onClick={() => setFrom(f)} style={{
                     flex: 1, padding: '6px', fontFamily: "'Cormorant Garamond', serif",
                     fontSize: 12, letterSpacing: 2, cursor: 'pointer',
-                    background: from === f ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.06)',
-                    border: `0.5px solid ${from === f ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)'}`,
-                    borderRadius: 8, color: 'rgba(255,255,255,0.8)',
+                    background: from === f ? 'rgba(var(--ink),0.2)' : 'rgba(var(--ink),0.06)',
+                    border: `0.5px solid ${from === f ? 'rgba(var(--ink),0.3)' : 'rgba(var(--ink),0.1)'}`,
+                    borderRadius: 8, color: 'rgba(var(--ink),0.8)',
                   }}>
                     from {f}
                   </button>
                 ))}
               </div>
               <button onClick={add} disabled={loading || !quote.trim()} style={{
-                marginTop: 10, width: '100%', background: 'rgba(255,255,255,0.15)',
-                border: '0.5px solid rgba(255,255,255,0.2)', borderRadius: 10, padding: '8px',
+                marginTop: 10, width: '100%', background: 'rgba(var(--ink),0.15)',
+                border: '0.5px solid rgba(var(--ink),0.2)', borderRadius: 10, padding: '8px',
                 fontFamily: "'Cormorant Garamond', serif", fontSize: 14,
-                color: loading ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.88)',
+                color: loading ? 'rgba(var(--ink),0.4)' : 'rgba(var(--ink),0.88)',
                 cursor: loading ? 'wait' : 'pointer', letterSpacing: 2,
               }}>
                 {loading ? 'claude正在写批注…' : 'mark it'}
@@ -136,24 +136,24 @@ export default function Snippets({ onNavigate }: { onNavigate: (p: Page) => void
                   style={{ borderRadius: 16, padding: '14px 16px', cursor: 'pointer' }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                    <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, lineHeight: 1.75, color: 'rgba(255,255,255,0.9)', fontStyle: 'italic', flex: 1 }}>
+                    <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, lineHeight: 1.75, color: 'rgba(var(--ink),0.9)', fontStyle: 'italic', flex: 1 }}>
                       「{s.quote}」
                     </p>
                     <button onClick={e => { e.stopPropagation(); remove(s.id) }}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: 'rgba(255,255,255,0.3)', flexShrink: 0 }}>×</button>
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: 'rgba(var(--ink),0.3)', flexShrink: 0 }}>×</button>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: 2, fontStyle: 'italic' }}>from {s.from}</span>
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: 1 }}>{s.date}</span>
+                    <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.35)', letterSpacing: 2, fontStyle: 'italic' }}>from {s.from}</span>
+                    <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.3)', letterSpacing: 1 }}>{s.date}</span>
                   </div>
                 </div>
 
                 <AnimatePresence>
                   {expanded === s.id && s.annotation && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                      style={{ overflow: 'hidden', marginTop: 6, padding: '12px 16px', background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 12 }}>
-                      <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: 2, marginBottom: 6, fontStyle: 'italic' }}>claude的批注</p>
-                      <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.7 }}>{s.annotation}</p>
+                      style={{ overflow: 'hidden', marginTop: 6, padding: '12px 16px', background: 'rgba(var(--ink),0.06)', border: '0.5px solid rgba(var(--ink),0.1)', borderRadius: 12 }}>
+                      <p style={{ fontSize: 10, color: 'rgba(var(--ink),0.35)', letterSpacing: 2, marginBottom: 6, fontStyle: 'italic' }}>claude的批注</p>
+                      <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14, color: 'rgba(var(--ink),0.75)', lineHeight: 1.7 }}>{s.annotation}</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -161,7 +161,7 @@ export default function Snippets({ onNavigate }: { onNavigate: (p: Page) => void
             ))}
           </AnimatePresence>
           {items.length === 0 && (
-            <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', fontSize: 14, marginTop: 80, letterSpacing: 2, lineHeight: 2 }}>
+            <p style={{ textAlign: 'center', color: 'rgba(var(--ink),0.25)', fontStyle: 'italic', fontSize: 14, marginTop: 80, letterSpacing: 2, lineHeight: 2 }}>
               那些打到你的句子<br />都可以放在这里
             </p>
           )}

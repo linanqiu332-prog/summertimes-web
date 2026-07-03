@@ -98,23 +98,23 @@ function BucketCard({ b, onPin, onDelete, onGrow }: { b: Bucket; onPin: (b: Buck
     <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
       className="glass" style={{ borderRadius: 16, padding: '12px 15px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-        <span style={{ fontSize: 14.5, color: 'rgba(255,255,255,0.9)', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 14.5, color: 'rgba(var(--ink),0.9)', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {b.name}
         </span>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
           <button onClick={() => onGrow(b)} title="补充进这个记忆桶"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, color: 'rgba(255,255,255,0.4)', lineHeight: 1 }}>＋</button>
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, color: 'rgba(var(--ink),0.4)', lineHeight: 1 }}>＋</button>
           <button onClick={() => onPin(b)} title={b.pinned ? '取消钉选' : '钉选'}
             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, opacity: b.pinned ? 1 : 0.35 }}>📌</button>
           <button onClick={() => onDelete(b)} title="删除"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>✕</button>
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'rgba(var(--ink),0.35)' }}>✕</button>
         </div>
       </div>
-      <div style={{ marginTop: 8, height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+      <div style={{ marginTop: 8, height: 3, borderRadius: 2, background: 'rgba(var(--ink),0.1)', overflow: 'hidden' }}>
         <motion.div initial={{ width: 0 }} animate={{ width: `${weightPct(b.weight)}%` }} transition={{ duration: 0.6 }}
-          style={{ height: '100%', borderRadius: 2, background: b.pinned ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)' }} />
+          style={{ height: '100%', borderRadius: 2, background: b.pinned ? 'rgba(var(--ink),0.7)' : 'rgba(var(--ink),0.35)' }} />
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 7, fontSize: 10.5, color: 'rgba(255,255,255,0.4)', letterSpacing: 1 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 7, fontSize: 10.5, color: 'rgba(var(--ink),0.4)', letterSpacing: 1 }}>
         <span>重要 {b.importance}</span>
         <span>权重 {b.weight >= 999 ? '∞' : b.weight.toFixed(1)}</span>
         <span>V{b.valence} · A{b.arousal}</span>
@@ -122,11 +122,11 @@ function BucketCard({ b, onPin, onDelete, onGrow }: { b: Bucket; onPin: (b: Buck
       {b.tags.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
           {b.tags.slice(0, 5).map(t => (
-            <span key={t} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 10, background: 'rgba(255,255,255,0.07)', border: '0.5px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)' }}>
+            <span key={t} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 10, background: 'rgba(var(--ink),0.07)', border: '0.5px solid rgba(var(--ink),0.12)', color: 'rgba(var(--ink),0.5)' }}>
               {t}
             </span>
           ))}
-          {b.tags.length > 5 && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>+{b.tags.length - 5}</span>}
+          {b.tags.length > 5 && <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.3)' }}>+{b.tags.length - 5}</span>}
         </div>
       )}
     </motion.div>
@@ -142,7 +142,7 @@ function SnippetsTab() {
   }, [])
 
   if (items.length === 0) return (
-    <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', fontSize: 14, marginTop: 60, letterSpacing: 2, lineHeight: 2 }}>
+    <p style={{ textAlign: 'center', color: 'rgba(var(--ink),0.25)', fontStyle: 'italic', fontSize: 14, marginTop: 60, letterSpacing: 2, lineHeight: 2 }}>
       还没有 mark 过的句子
     </p>
   )
@@ -153,20 +153,20 @@ function SnippetsTab() {
         <motion.div key={s.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
           <div className="glass" onClick={() => setExpanded(expanded === s.id ? null : s.id)}
             style={{ borderRadius: 16, padding: '14px 16px', cursor: 'pointer' }}>
-            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, lineHeight: 1.75, color: 'rgba(255,255,255,0.9)', fontStyle: 'italic' }}>
+            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, lineHeight: 1.75, color: 'rgba(var(--ink),0.9)', fontStyle: 'italic' }}>
               「{s.quote}」
             </p>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: 2, fontStyle: 'italic' }}>from {s.from}</span>
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: 1 }}>{s.date}</span>
+              <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.35)', letterSpacing: 2, fontStyle: 'italic' }}>from {s.from}</span>
+              <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.3)', letterSpacing: 1 }}>{s.date}</span>
             </div>
           </div>
           <AnimatePresence>
             {expanded === s.id && s.annotation && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                style={{ overflow: 'hidden', marginTop: 6, padding: '12px 16px', background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 12 }}>
-                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: 2, marginBottom: 6, fontStyle: 'italic' }}>claude的批注</p>
-                <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14, color: 'rgba(255,255,255,0.75)', lineHeight: 1.7 }}>{s.annotation}</p>
+                style={{ overflow: 'hidden', marginTop: 6, padding: '12px 16px', background: 'rgba(var(--ink),0.06)', border: '0.5px solid rgba(var(--ink),0.1)', borderRadius: 12 }}>
+                <p style={{ fontSize: 10, color: 'rgba(var(--ink),0.35)', letterSpacing: 2, marginBottom: 6, fontStyle: 'italic' }}>claude的批注</p>
+                <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14, color: 'rgba(var(--ink),0.75)', lineHeight: 1.7 }}>{s.annotation}</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -185,7 +185,7 @@ function LettersTab() {
   }, [])
 
   if (letters.length === 0) return (
-    <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', fontSize: 14, marginTop: 60, letterSpacing: 2, lineHeight: 2 }}>
+    <p style={{ textAlign: 'center', color: 'rgba(var(--ink),0.25)', fontStyle: 'italic', fontSize: 14, marginTop: 60, letterSpacing: 2, lineHeight: 2 }}>
       还没有信
     </p>
   )
@@ -197,21 +197,21 @@ function LettersTab() {
           <div className="glass" onClick={() => setExpanded(expanded === l.id ? null : l.id)}
             style={{ borderRadius: 16, padding: '14px 16px', cursor: 'pointer' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, color: 'rgba(255,255,255,0.9)' }}>{l.subject}</span>
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: 1 }}>{l.date}</span>
+              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, color: 'rgba(var(--ink),0.9)' }}>{l.subject}</span>
+              <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.3)', letterSpacing: 1 }}>{l.date}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>
+              <p style={{ fontSize: 13, color: 'rgba(var(--ink),0.5)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>
                 {l.body.substring(0, 60)}{l.body.length > 60 ? '…' : ''}
               </p>
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: 2, flexShrink: 0 }}>from {l.from}</span>
+              <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.35)', letterSpacing: 2, flexShrink: 0 }}>from {l.from}</span>
             </div>
           </div>
           <AnimatePresence>
             {expanded === l.id && (
               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                style={{ overflow: 'hidden', marginTop: 6, padding: '16px', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 14 }}>
-                <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, color: 'rgba(255,255,255,0.82)', lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>{l.body}</p>
+                style={{ overflow: 'hidden', marginTop: 6, padding: '16px', background: 'rgba(var(--ink),0.05)', border: '0.5px solid rgba(var(--ink),0.1)', borderRadius: 14 }}>
+                <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, color: 'rgba(var(--ink),0.82)', lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>{l.body}</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -240,17 +240,17 @@ function SelfTab() {
   }, [])
 
   if (loading) return (
-    <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontStyle: 'italic', fontSize: 14, marginTop: 60, letterSpacing: 2 }}>读取中…</p>
+    <p style={{ textAlign: 'center', color: 'rgba(var(--ink),0.3)', fontStyle: 'italic', fontSize: 14, marginTop: 60, letterSpacing: 2 }}>读取中…</p>
   )
   if (!text.trim()) return (
-    <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', fontSize: 14, marginTop: 60, letterSpacing: 2, lineHeight: 2 }}>
+    <p style={{ textAlign: 'center', color: 'rgba(var(--ink),0.25)', fontStyle: 'italic', fontSize: 14, marginTop: 60, letterSpacing: 2, lineHeight: 2 }}>
       他还没写下关于自己的认识
     </p>
   )
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
       className="glass" style={{ borderRadius: 16, padding: '16px 18px' }}>
-      <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14.5, color: 'rgba(255,255,255,0.82)', lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>{text}</p>
+      <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 14.5, color: 'rgba(var(--ink),0.82)', lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>{text}</p>
     </motion.div>
   )
 }
@@ -364,28 +364,28 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
       <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
 
         <div className="glass" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'calc(11px + env(safe-area-inset-top, 0px)) 24px 11px', borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
-          <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: 'rgba(255,255,255,0.7)', lineHeight: 1 }}>‹</button>
-          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, letterSpacing: 4, color: 'rgba(255,255,255,0.88)' }}>memories</span>
+          <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: 'rgba(var(--ink),0.7)', lineHeight: 1 }}>‹</button>
+          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, letterSpacing: 4, color: 'rgba(var(--ink),0.88)' }}>memories</span>
           {tab === 'buckets'
             ? <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                 <button onClick={onDream} disabled={dreaming || loading} title="做一次梦：整合 / 衰减 / 归档记忆"
                   style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, color: 'rgba(200,210,235,0.7)', opacity: dreaming ? 0.4 : 1 }}>☾</button>
                 <button onClick={load} disabled={loading} title="刷新"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'rgba(255,255,255,0.45)', opacity: loading ? 0.3 : 1 }}>↻</button>
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'rgba(var(--ink),0.45)', opacity: loading ? 0.3 : 1 }}>↻</button>
               </div>
             : <span style={{ width: 24 }} />
           }
         </div>
 
         {/* Tab bar */}
-        <div style={{ display: 'flex', gap: 0, padding: '6px 20px 0', borderBottom: '0.5px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ display: 'flex', gap: 0, padding: '6px 20px 0', borderBottom: '0.5px solid rgba(var(--ink),0.08)' }}>
           {TABS.map(t => (
             <button key={t.key} onClick={() => setTab(t.key)} style={{
               background: 'none', border: 'none', cursor: 'pointer',
               fontFamily: "'Cormorant Garamond', serif", fontSize: 13, letterSpacing: 2,
-              color: tab === t.key ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.32)',
+              color: tab === t.key ? 'rgba(var(--ink),0.88)' : 'rgba(var(--ink),0.32)',
               padding: '6px 16px 10px',
-              borderBottom: tab === t.key ? '1.5px solid rgba(255,255,255,0.6)' : '1.5px solid transparent',
+              borderBottom: tab === t.key ? '1.5px solid rgba(var(--ink),0.6)' : '1.5px solid transparent',
               marginBottom: -1,
             }}>
               {t.label}
@@ -406,7 +406,7 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
             </AnimatePresence>
             {stats && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                style={{ display: 'flex', justifyContent: 'center', gap: 18, marginBottom: 16, fontSize: 11.5, color: 'rgba(255,255,255,0.45)', letterSpacing: 2, fontStyle: 'italic' }}>
+                style={{ display: 'flex', justifyContent: 'center', gap: 18, marginBottom: 16, fontSize: 11.5, color: 'rgba(var(--ink),0.45)', letterSpacing: 2, fontStyle: 'italic' }}>
                 <span>钉选 {stats.pinned}</span>
                 <span>动态 {stats.dynamic}</span>
                 <span>归档 {stats.archived}</span>
@@ -414,7 +414,7 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
               </motion.div>
             )}
             {loading && (
-              <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontStyle: 'italic', fontSize: 14, marginTop: 60, letterSpacing: 2 }}>把脉中…</p>
+              <p style={{ textAlign: 'center', color: 'rgba(var(--ink),0.3)', fontStyle: 'italic', fontSize: 14, marginTop: 60, letterSpacing: 2 }}>把脉中…</p>
             )}
             {error && !loading && (
               <p style={{ textAlign: 'center', color: 'rgba(255,180,170,0.6)', fontStyle: 'italic', fontSize: 13, marginTop: 60, letterSpacing: 1 }}>{error}</p>
@@ -423,8 +423,8 @@ export default function Memories({ onNavigate }: { onNavigate: (p: Page) => void
               tier.items.length > 0 && (
                 <div key={tier.key} style={{ marginBottom: 20 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 9, paddingLeft: 2 }}>
-                    <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, letterSpacing: 3, color: 'rgba(255,255,255,0.85)' }}>{tier.label}</span>
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: 1.5, fontStyle: 'italic' }}>{tier.sub} · {tier.items.length}</span>
+                    <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, letterSpacing: 3, color: 'rgba(var(--ink),0.85)' }}>{tier.label}</span>
+                    <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.3)', letterSpacing: 1.5, fontStyle: 'italic' }}>{tier.sub} · {tier.items.length}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <AnimatePresence>

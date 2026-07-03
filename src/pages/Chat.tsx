@@ -166,10 +166,10 @@ function ThinkingBlock({ text }: { text: string }) {
   return (
     <div style={{ marginBottom: 6 }}>
       <button onClick={() => setOpen(v => !v)} style={{
-        background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.12)',
+        background: 'rgba(var(--ink),0.06)', border: '0.5px solid rgba(var(--ink),0.12)',
         borderRadius: 8, padding: '4px 10px', cursor: 'pointer',
         fontFamily: "'Cormorant Garamond', serif",
-        fontSize: 11, color: 'rgba(255,255,255,0.45)', letterSpacing: 1.5,
+        fontSize: 11, color: 'rgba(var(--ink),0.45)', letterSpacing: 1.5,
         display: 'flex', alignItems: 'center', gap: 6,
       }}>
         <span style={{ fontSize: 9 }}>{open ? '▲' : '▼'}</span>
@@ -178,8 +178,8 @@ function ThinkingBlock({ text }: { text: string }) {
       <AnimatePresence>
         {open && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-            style={{ marginTop: 6, padding: '10px 12px', background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.08)', borderRadius: 10, overflow: 'hidden' }}>
-            <p style={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(255,255,255,0.35)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{text}</p>
+            style={{ marginTop: 6, padding: '10px 12px', background: 'rgba(var(--ink),0.04)', border: '0.5px solid rgba(var(--ink),0.08)', borderRadius: 10, overflow: 'hidden' }}>
+            <p style={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(var(--ink),0.35)', lineHeight: 1.7, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{text}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -546,18 +546,18 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
 
         <div className="glass" style={{ borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'calc(11px + env(safe-area-inset-top, 0px)) 24px 11px' }}>
-            <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: 'rgba(255,255,255,0.7)', lineHeight: 1 }}>‹</button>
-            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, letterSpacing: 4, color: 'rgba(255,255,255,0.88)' }}>Summertimes</span>
-            <button onClick={() => { setShowSearch(v => !v); setSearchQuery('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: showSearch ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.45)' }}>⌕</button>
+            <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: 'rgba(var(--ink),0.7)', lineHeight: 1 }}>‹</button>
+            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, letterSpacing: 4, color: 'rgba(var(--ink),0.88)' }}>Summertimes</span>
+            <button onClick={() => { setShowSearch(v => !v); setSearchQuery('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: showSearch ? 'rgba(var(--ink),0.9)' : 'rgba(var(--ink),0.45)' }}>⌕</button>
           </div>
           <AnimatePresence>
             {showSearch && (
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
                 style={{ overflow: 'hidden', padding: '0 16px 12px' }}>
                 <input ref={searchRef} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="搜索消息…"
-                  style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: '0.5px solid rgba(255,255,255,0.18)', borderRadius: 20, padding: '7px 16px', fontFamily: "'Cormorant Garamond', serif", fontSize: 14, color: 'rgba(255,255,255,0.88)', outline: 'none', boxSizing: 'border-box' }} />
+                  style={{ width: '100%', background: 'rgba(var(--ink),0.1)', border: '0.5px solid rgba(var(--ink),0.18)', borderRadius: 20, padding: '7px 16px', fontFamily: "'Cormorant Garamond', serif", fontSize: 14, color: 'rgba(var(--ink),0.88)', outline: 'none', boxSizing: 'border-box' }} />
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 7, paddingLeft: 4 }}>
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontStyle: 'italic', letterSpacing: 1 }}>
+                  <span style={{ fontSize: 11, color: 'rgba(var(--ink),0.35)', fontStyle: 'italic', letterSpacing: 1 }}>
                     {searchQuery ? `${displayMessages.length} 条结果` : `共 ${messages.length} 条`}
                   </span>
                   <button onClick={clearHistory}
@@ -575,44 +575,44 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
             const el = scrollRef.current
             if (el) setShowJump(el.scrollHeight - el.scrollTop - el.clientHeight > 300)
           }}
-          style={{ flex: 1, overflowY: 'auto', padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 20, scrollbarWidth: 'none' }}>
+          style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 20, scrollbarWidth: 'none' }}>
           <AnimatePresence initial={false}>
             {displayMessages.map(m => (
               <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: m.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '78%', alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: 2, marginBottom: 5, fontStyle: 'italic' }}>
+                <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.35)', letterSpacing: 2, marginBottom: 5, fontStyle: 'italic' }}>
                   {m.role === 'assistant' ? 'claude' : 'eve'}
                 </span>
                 {m.role === 'assistant' ? (
                   <div style={{ width: '100%' }}>
                     {m.thinking && <ThinkingBlock text={m.thinking} />}
                     <div className="glass" style={{ borderRadius: 18, borderBottomLeftRadius: 4, padding: '10px 15px' }}>
-                      <p style={{ fontSize: 15, lineHeight: 1.75, color: 'rgba(255,255,255,0.9)' }}>{m.text}</p>
+                      <p style={{ fontSize: 15, lineHeight: 1.75, color: 'rgba(var(--ink),0.9)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{m.text}</p>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 6, marginLeft: 4 }}>
                       <button onClick={() => speak(m)} title="听他说"
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: playingId === m.id ? 'rgba(200,225,215,0.9)' : 'rgba(255,255,255,0.4)', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 5, padding: 0 }}>
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: playingId === m.id ? 'rgba(200,225,215,0.9)' : 'rgba(var(--ink),0.4)', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 5, padding: 0 }}>
                         {loadingId === m.id ? '◌' : playingId === m.id ? '◼' : '▶'}
                         <span style={{ fontSize: 10.5, fontStyle: 'italic', fontFamily: "'Cormorant Garamond', serif" }}>
                           {loadingId === m.id ? '…' : playingId === m.id ? 'playing' : 'listen'}
                         </span>
                       </button>
                       <button onClick={() => regenerate(m.id)} disabled={loading} title="重说"
-                        style={{ background: 'none', border: 'none', cursor: loading ? 'default' : 'pointer', fontSize: 13, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 5, padding: 0, opacity: loading ? 0.4 : 1 }}>
+                        style={{ background: 'none', border: 'none', cursor: loading ? 'default' : 'pointer', fontSize: 13, color: 'rgba(var(--ink),0.4)', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 5, padding: 0, opacity: loading ? 0.4 : 1 }}>
                         ↻
                         <span style={{ fontSize: 10.5, fontStyle: 'italic', fontFamily: "'Cormorant Garamond', serif" }}>重说</span>
                       </button>
                     </div>
                     {m.marked && (
                       <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                        style={{ marginTop: 6, padding: '6px 12px', background: 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.12)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>✦</span>
-                        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', fontStyle: 'italic', letterSpacing: 1 }}>marked → snippets</span>
+                        style={{ marginTop: 6, padding: '6px 12px', background: 'rgba(var(--ink),0.06)', border: '0.5px solid rgba(var(--ink),0.12)', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 11, color: 'rgba(var(--ink),0.4)' }}>✦</span>
+                        <span style={{ fontSize: 11, color: 'rgba(var(--ink),0.45)', fontStyle: 'italic', letterSpacing: 1 }}>marked → snippets</span>
                       </motion.div>
                     )}
                   </div>
                 ) : (
-                  <p style={{ fontSize: 15, lineHeight: 1.75, color: 'rgba(255,255,255,0.78)' }}>{m.text}</p>
+                  <p style={{ fontSize: 15, lineHeight: 1.75, color: 'rgba(var(--ink),0.78)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{m.text}</p>
                 )}
               </motion.div>
             ))}
@@ -620,9 +620,9 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
           {loading && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', maxWidth: '78%' }}>
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: 2, marginBottom: 5, fontStyle: 'italic' }}>claude</span>
+              <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.35)', letterSpacing: 2, marginBottom: 5, fontStyle: 'italic' }}>claude</span>
               <div className="glass" style={{ borderRadius: 18, borderBottomLeftRadius: 4, padding: '12px 18px' }}>
-                <span style={{ color: 'rgba(255,255,255,0.5)', letterSpacing: 4 }}>· · ·</span>
+                <span style={{ color: 'rgba(var(--ink),0.5)', letterSpacing: 4 }}>· · ·</span>
               </div>
             </motion.div>
           )}
@@ -632,9 +632,9 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
           <button className="glass"
             onClick={() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })}
             style={{ position: 'absolute', bottom: 96, left: '50%', marginLeft: -42, width: 84,
-              padding: '6px 0', borderRadius: 20, border: '0.5px solid rgba(255,255,255,0.25)',
+              padding: '6px 0', borderRadius: 20, border: '0.5px solid rgba(var(--ink),0.25)',
               fontFamily: "'Cormorant Garamond', serif", fontSize: 13,
-              color: 'rgba(255,255,255,0.85)', cursor: 'pointer', zIndex: 5 }}>
+              color: 'rgba(var(--ink),0.85)', cursor: 'pointer', zIndex: 5 }}>
             ↓
           </button>
         )}
@@ -644,11 +644,11 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
               <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
                 placeholder="说点什么…" rows={1} disabled={loading}
-                style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: '0.5px solid rgba(255,255,255,0.18)', borderRadius: 22, padding: '9px 16px', fontFamily: "'Cormorant Garamond', serif", fontSize: 16, color: 'rgba(255,255,255,0.88)', outline: 'none', resize: 'none', maxHeight: 120, overflow: 'auto' }}
+                style={{ flex: 1, background: 'rgba(var(--ink),0.1)', border: '0.5px solid rgba(var(--ink),0.18)', borderRadius: 22, padding: '9px 16px', fontFamily: "'Cormorant Garamond', serif", fontSize: 16, color: 'rgba(var(--ink),0.88)', outline: 'none', resize: 'none', maxHeight: 120, overflow: 'auto' }}
                 onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 120) + 'px' }}
               />
               <button onClick={send} disabled={loading}
-                style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.18)', border: '0.5px solid rgba(255,255,255,0.25)', cursor: 'pointer', fontSize: 16, color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: loading ? 0.4 : 1 }}>↑</button>
+                style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(var(--ink),0.18)', border: '0.5px solid rgba(var(--ink),0.25)', cursor: 'pointer', fontSize: 16, color: 'rgba(var(--ink),0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: loading ? 0.4 : 1 }}>↑</button>
             </div>
             {(sessionTokens.input + sessionTokens.output) > 0 && (
               <div style={{ display: 'flex', gap: 12, marginTop: 7, paddingLeft: 4 }}>
@@ -663,7 +663,7 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
                     ⚡{sessionTokens.cache.toLocaleString()}
                   </span>
                 )}
-                <span style={{ fontFamily: 'monospace', fontSize: 10, color: 'rgba(255,255,255,0.25)', letterSpacing: 0.5 }}>
+                <span style={{ fontFamily: 'monospace', fontSize: 10, color: 'rgba(var(--ink),0.25)', letterSpacing: 0.5 }}>
                   ${sessionCost.toFixed(4)}
                 </span>
               </div>

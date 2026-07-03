@@ -42,6 +42,19 @@ export default function Home({ onNavigate }: { onNavigate: (p: Page) => void }) 
   const [time, setTime] = useState('')
   const [active, setActive] = useState<Page>('chat')
   const [cds, setCds] = useState<CD[]>(loadCDs)
+  const [theme, setTheme] = useState<'dark' | 'light'>(
+    () => (document.documentElement.dataset.theme === 'light' ? 'light' : 'dark')
+  )
+
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    if (next === 'light') document.documentElement.dataset.theme = 'light'
+    else delete document.documentElement.dataset.theme
+    document.querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', next === 'light' ? '#f7f2ea' : '#171311')
+    localStorage.setItem('summertimes_theme', next)
+  }
 
   function persistCds(next: CD[]) {
     setCds(next)
@@ -98,19 +111,32 @@ export default function Home({ onNavigate }: { onNavigate: (p: Page) => void }) 
           zIndex: 2, padding: 'env(safe-area-inset-top, 0px) 32px 0',
         }}
       >
-        <motion.p
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
           style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontSize: 13, color: 'rgba(255,255,255,0.5)',
-            letterSpacing: 4, alignSelf: 'flex-start',
+            alignSelf: 'stretch', display: 'flex',
+            alignItems: 'center', justifyContent: 'space-between',
             marginBottom: 'auto', marginTop: 20,
           }}
         >
-          {time}
-        </motion.p>
+          <span style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: 13, color: 'rgba(var(--ink),0.5)',
+            letterSpacing: 4,
+          }}>
+            {time}
+          </span>
+          <button onClick={toggleTheme} title={theme === 'dark' ? '切到浅色' : '切到深色'}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 15, color: 'rgba(var(--ink),0.5)',
+              lineHeight: 1, padding: 4,
+            }}>
+            {theme === 'dark' ? '☾' : '☀'}
+          </button>
+        </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -122,7 +148,7 @@ export default function Home({ onNavigate }: { onNavigate: (p: Page) => void }) 
             fontFamily: "'Cormorant Garamond', serif",
             fontSize: 'clamp(28px, 6vw, 48px)',
             fontWeight: 300,
-            color: 'rgba(255,255,255,0.95)',
+            color: 'rgba(var(--ink),0.95)',
             letterSpacing: '0.18em',
             textTransform: 'uppercase',
             marginBottom: 8,
@@ -132,7 +158,7 @@ export default function Home({ onNavigate }: { onNavigate: (p: Page) => void }) 
           <p style={{
             fontFamily: "'Cormorant Garamond', serif",
             fontSize: 13, fontStyle: 'italic',
-            color: 'rgba(255,255,255,0.45)',
+            color: 'rgba(var(--ink),0.45)',
             letterSpacing: '0.16em',
           }}>
             {dateStr}
@@ -150,27 +176,27 @@ export default function Home({ onNavigate }: { onNavigate: (p: Page) => void }) 
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: 3, fontStyle: 'italic' }}>
+            <span style={{ fontSize: 11, color: 'rgba(var(--ink),0.4)', letterSpacing: 3, fontStyle: 'italic' }}>
               {primary.name}
             </span>
             <button onClick={addCd} title="添加倒计时"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, color: 'rgba(255,255,255,0.4)', lineHeight: 1, padding: 0 }}>+</button>
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, color: 'rgba(var(--ink),0.4)', lineHeight: 1, padding: 0 }}>+</button>
           </div>
-          <p style={{ fontSize: 40, fontWeight: 300, color: 'rgba(255,255,255,0.9)', letterSpacing: 2, lineHeight: 1 }}>
+          <p style={{ fontSize: 40, fontWeight: 300, color: 'rgba(var(--ink),0.9)', letterSpacing: 2, lineHeight: 1 }}>
             {daysOf(primary.date).n}
           </p>
-          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: 3, fontStyle: 'italic', marginTop: 6 }}>
+          <p style={{ fontSize: 11, color: 'rgba(var(--ink),0.4)', letterSpacing: 3, fontStyle: 'italic', marginTop: 6 }}>
             days
           </p>
           {rest.length > 0 && (
-            <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(255,255,255,0.15)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 7 }}>
+            <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(var(--ink),0.15)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 7 }}>
               {rest.map(c => {
                 const d = daysOf(c.date)
                 return (
                   <div key={c.id} onDoubleClick={() => delCd(c)} title="双击删除"
                     style={{ display: 'flex', justifyContent: 'space-between', gap: 28, fontSize: 12.5, letterSpacing: 1 }}>
-                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>{c.name}</span>
-                    <span style={{ color: d.future ? 'rgba(200,225,215,0.85)' : 'rgba(255,255,255,0.65)' }}>
+                    <span style={{ color: 'rgba(var(--ink),0.6)' }}>{c.name}</span>
+                    <span style={{ color: d.future ? 'rgba(200,225,215,0.85)' : 'rgba(var(--ink),0.65)' }}>
                       {d.future ? `${d.n}d 后` : `${d.n}d`}
                     </span>
                   </div>
@@ -191,7 +217,7 @@ export default function Home({ onNavigate }: { onNavigate: (p: Page) => void }) 
           zIndex: 3,
           display: 'flex', alignItems: 'center',
           padding: '24px 18px calc(14px + env(safe-area-inset-bottom, 0px))',
-          background: 'linear-gradient(to top, rgba(20,17,14,0.6), transparent)',
+          background: 'linear-gradient(to top, rgba(var(--veil),0.6), transparent)',
         }}
       >
         <div style={{
@@ -209,8 +235,8 @@ export default function Home({ onNavigate }: { onNavigate: (p: Page) => void }) 
               }}
               style={{
                 flexShrink: 0,
-                background: active === item.key ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.12)',
-                border: '0.5px solid rgba(255,255,255,0.2)',
+                background: active === item.key ? 'rgba(var(--ink),0.88)' : 'rgba(var(--ink),0.12)',
+                border: '0.5px solid rgba(var(--ink),0.2)',
                 borderRadius: 24,
                 padding: '10px 20px',
                 cursor: 'pointer',
@@ -221,14 +247,14 @@ export default function Home({ onNavigate }: { onNavigate: (p: Page) => void }) 
             >
               <span style={{
                 display: 'flex',
-                color: active === item.key ? '#3d2f26' : 'rgba(255,255,255,0.82)',
+                color: active === item.key ? 'rgb(var(--paper))' : 'rgba(var(--ink),0.82)',
               }}>
                 <Icon name={item.icon} size={18} />
               </span>
               <span style={{
                 fontFamily: "'Cormorant Garamond', serif",
                 fontSize: 11, letterSpacing: 2,
-                color: active === item.key ? '#3d2f26' : 'rgba(255,255,255,0.65)',
+                color: active === item.key ? 'rgb(var(--paper))' : 'rgba(var(--ink),0.65)',
               }}>
                 {item.label}
               </span>

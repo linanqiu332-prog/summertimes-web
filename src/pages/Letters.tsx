@@ -121,9 +121,9 @@ export default function Letters({ onNavigate }: { onNavigate: (p: Page) => void 
       <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column', paddingBottom: 80 }}>
 
         <div className="glass" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'calc(11px + env(safe-area-inset-top, 0px)) 24px 11px', borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
-          <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: 'rgba(255,255,255,0.7)', lineHeight: 1 }}>‹</button>
-          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, letterSpacing: 4, color: 'rgba(255,255,255,0.88)' }}>letters</span>
-          <button onClick={() => { setMode(mode ? null : 'new-eve'); setReplyTo(null) }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: 'rgba(255,255,255,0.7)' }}>+</button>
+          <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: 'rgba(var(--ink),0.7)', lineHeight: 1 }}>‹</button>
+          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, letterSpacing: 4, color: 'rgba(var(--ink),0.88)' }}>letters</span>
+          <button onClick={() => { setMode(mode ? null : 'new-eve'); setReplyTo(null) }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: 'rgba(var(--ink),0.7)' }}>+</button>
         </div>
 
         <AnimatePresence>
@@ -135,26 +135,26 @@ export default function Letters({ onNavigate }: { onNavigate: (p: Page) => void 
                   {(['new-eve', 'new-claude'] as const).map(m => (
                     <button key={m} onClick={() => setMode(m)} style={{
                       flex: 1, padding: '6px', fontFamily: "'Cormorant Garamond', serif", fontSize: 12, letterSpacing: 2, cursor: 'pointer',
-                      background: mode === m ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.06)',
-                      border: `0.5px solid ${mode === m ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)'}`,
-                      borderRadius: 8, color: 'rgba(255,255,255,0.8)',
+                      background: mode === m ? 'rgba(var(--ink),0.2)' : 'rgba(var(--ink),0.06)',
+                      border: `0.5px solid ${mode === m ? 'rgba(var(--ink),0.3)' : 'rgba(var(--ink),0.1)'}`,
+                      borderRadius: 8, color: 'rgba(var(--ink),0.8)',
                     }}>
                       {m === 'new-eve' ? 'eve 写' : 'claude 写'}
                     </button>
                   ))}
                 </div>
               )}
-              {replyTo && <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: 2, marginBottom: 10, fontStyle: 'italic' }}>回复：{replyTo.subject}</p>}
+              {replyTo && <p style={{ fontSize: 11, color: 'rgba(var(--ink),0.4)', letterSpacing: 2, marginBottom: 10, fontStyle: 'italic' }}>回复：{replyTo.subject}</p>}
               <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="主题…"
-                style={{ width: '100%', background: 'rgba(255,255,255,0.08)', border: '0.5px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '8px 12px', fontFamily: "'Cormorant Garamond', serif", fontSize: 14, color: 'rgba(255,255,255,0.88)', outline: 'none', marginBottom: 8, boxSizing: 'border-box' }} />
+                style={{ width: '100%', background: 'rgba(var(--ink),0.08)', border: '0.5px solid rgba(var(--ink),0.15)', borderRadius: 10, padding: '8px 12px', fontFamily: "'Cormorant Garamond', serif", fontSize: 14, color: 'rgba(var(--ink),0.88)', outline: 'none', marginBottom: 8, boxSizing: 'border-box' }} />
               {(mode === 'new-eve' || mode === 'reply') ? (
                 <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="写下你想说的…" rows={5}
-                  style={{ width: '100%', background: 'rgba(255,255,255,0.08)', border: '0.5px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '8px 12px', fontFamily: "'Cormorant Garamond', serif", fontSize: 14, color: 'rgba(255,255,255,0.88)', outline: 'none', resize: 'none', lineHeight: 1.7, boxSizing: 'border-box' }} />
+                  style={{ width: '100%', background: 'rgba(var(--ink),0.08)', border: '0.5px solid rgba(var(--ink),0.15)', borderRadius: 10, padding: '8px 12px', fontFamily: "'Cormorant Garamond', serif", fontSize: 14, color: 'rgba(var(--ink),0.88)', outline: 'none', resize: 'none', lineHeight: 1.7, boxSizing: 'border-box' }} />
               ) : (
-                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', letterSpacing: 1, padding: '4px 0' }}>Claude会根据主题自己写</p>
+                <p style={{ fontSize: 12, color: 'rgba(var(--ink),0.4)', fontStyle: 'italic', letterSpacing: 1, padding: '4px 0' }}>Claude会根据主题自己写</p>
               )}
               <button onClick={mode === 'new-claude' ? submitClaude : submitEve} disabled={loading}
-                style={{ marginTop: 10, width: '100%', background: 'rgba(255,255,255,0.15)', border: '0.5px solid rgba(255,255,255,0.2)', borderRadius: 10, padding: '8px', fontFamily: "'Cormorant Garamond', serif", fontSize: 14, color: loading ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.88)', cursor: loading ? 'wait' : 'pointer', letterSpacing: 2 }}>
+                style={{ marginTop: 10, width: '100%', background: 'rgba(var(--ink),0.15)', border: '0.5px solid rgba(var(--ink),0.2)', borderRadius: 10, padding: '8px', fontFamily: "'Cormorant Garamond', serif", fontSize: 14, color: loading ? 'rgba(var(--ink),0.4)' : 'rgba(var(--ink),0.88)', cursor: loading ? 'wait' : 'pointer', letterSpacing: 2 }}>
                 {loading ? '写信中…' : '寄出'}
               </button>
             </motion.div>
@@ -163,7 +163,7 @@ export default function Letters({ onNavigate }: { onNavigate: (p: Page) => void 
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px 24px', scrollbarWidth: 'none' }}>
           {letters.length === 0 && (
-            <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', fontSize: 14, marginTop: 80, letterSpacing: 2, lineHeight: 2 }}>还没有信<br />写一封吧</p>
+            <p style={{ textAlign: 'center', color: 'rgba(var(--ink),0.25)', fontStyle: 'italic', fontSize: 14, marginTop: 80, letterSpacing: 2, lineHeight: 2 }}>还没有信<br />写一封吧</p>
           )}
           <AnimatePresence>
             {letters.map(l => (
@@ -171,31 +171,31 @@ export default function Letters({ onNavigate }: { onNavigate: (p: Page) => void 
                 <div className="glass" onClick={() => setExpanded(expanded === l.id ? null : l.id)}
                   style={{ borderRadius: 16, padding: '14px 16px', cursor: 'pointer' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, color: 'rgba(255,255,255,0.9)' }}>{l.subject}</span>
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: 1 }}>{l.date}</span>
+                    <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, color: 'rgba(var(--ink),0.9)' }}>{l.subject}</span>
+                    <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.3)', letterSpacing: 1 }}>{l.date}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>
+                    <p style={{ fontSize: 13, color: 'rgba(var(--ink),0.5)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>
                       {l.body.substring(0, 60)}{l.body.length > 60 ? '…' : ''}
                     </p>
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: 2, flexShrink: 0 }}>from {l.from}</span>
+                    <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.35)', letterSpacing: 2, flexShrink: 0 }}>from {l.from}</span>
                   </div>
                 </div>
                 <AnimatePresence>
                   {expanded === l.id && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                      style={{ overflow: 'hidden', marginTop: 6, padding: '16px', background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 14 }}>
-                      <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, color: 'rgba(255,255,255,0.82)', lineHeight: 1.9, whiteSpace: 'pre-wrap', marginBottom: 16 }}>{l.body}</p>
-                      <div style={{ display: 'flex', gap: 8, borderTop: '0.5px solid rgba(255,255,255,0.08)', paddingTop: 12 }}>
+                      style={{ overflow: 'hidden', marginTop: 6, padding: '16px', background: 'rgba(var(--ink),0.05)', border: '0.5px solid rgba(var(--ink),0.1)', borderRadius: 14 }}>
+                      <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, color: 'rgba(var(--ink),0.82)', lineHeight: 1.9, whiteSpace: 'pre-wrap', marginBottom: 16 }}>{l.body}</p>
+                      <div style={{ display: 'flex', gap: 8, borderTop: '0.5px solid rgba(var(--ink),0.08)', paddingTop: 12 }}>
                         {l.from === 'eve' && (
                           <button onClick={() => replyFromClaude(l)} disabled={loading}
-                            style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: '0.5px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px', fontFamily: "'Cormorant Garamond', serif", fontSize: 12, color: 'rgba(255,255,255,0.7)', cursor: 'pointer', letterSpacing: 2 }}>
+                            style={{ flex: 1, background: 'rgba(var(--ink),0.1)', border: '0.5px solid rgba(var(--ink),0.15)', borderRadius: 10, padding: '7px', fontFamily: "'Cormorant Garamond', serif", fontSize: 12, color: 'rgba(var(--ink),0.7)', cursor: 'pointer', letterSpacing: 2 }}>
                             {loading ? '…' : 'claude 回信'}
                           </button>
                         )}
                         {l.from === 'claude' && (
                           <button onClick={() => { setMode('reply'); setReplyTo(l); setSubject(`re: ${l.subject}`) }}
-                            style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: '0.5px solid rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px', fontFamily: "'Cormorant Garamond', serif", fontSize: 12, color: 'rgba(255,255,255,0.7)', cursor: 'pointer', letterSpacing: 2 }}>
+                            style={{ flex: 1, background: 'rgba(var(--ink),0.1)', border: '0.5px solid rgba(var(--ink),0.15)', borderRadius: 10, padding: '7px', fontFamily: "'Cormorant Garamond', serif", fontSize: 12, color: 'rgba(var(--ink),0.7)', cursor: 'pointer', letterSpacing: 2 }}>
                             eve 回信
                           </button>
                         )}

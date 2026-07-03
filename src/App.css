@@ -2,12 +2,33 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* ── 主题变量 ──────────────────────────────────────────
+   --ink   前景（文字/图标/描边），RGB 三元组，配合 rgba(var(--ink),a)
+   --paper 底色（页面背景 / 反色文字）
+   --veil  遮罩色（压在背景图上保证文字可读）
+   dark = 默认；light 由 <html data-theme="light"> 激活 */
+:root {
+  --ink: 255,255,255;
+  --paper: 23,19,17;      /* #171311 暖近黑 */
+  --veil: 20,17,14;
+  --glass: 148,163,172;
+  --glass-a: 0.18;
+  --bg-image: url('/bg.jpg');
+}
+[data-theme='light'] {
+  --ink: 54,43,35;        /* 暖深棕，替代纯黑 */
+  --paper: 247,242,234;   /* 米白 */
+  --veil: 249,245,238;
+  --glass: 255,255,255;
+  --glass-a: 0.55;
+  --bg-image: url('/bg-light.jpg');
+}
+
 html, body {
   font-family: 'Cormorant Garamond', Georgia, serif;
-  /* 暖色近黑：iOS PWA 给状态栏 / home indicator 安全区刷的就是这个色，
-     从 navy #1a1f24 改成暖调，底部不再跳出蓝黑条 */
-  background: #171311;
-  color: rgba(255,255,255,0.88);
+  /* iOS PWA 给状态栏 / home indicator 安全区刷的就是这个色 */
+  background: rgb(var(--paper));
+  color: rgba(var(--ink),0.88);
   height: 100dvh;
   overflow: hidden;
 }
@@ -21,35 +42,34 @@ html, body {
 
 /* 背景与遮罩用 fixed 锚定整个视口：无视任何祖先的 overflow:hidden / padding，
    始终铺满全屏（含 Dynamic Island / 状态栏区域）。配合 index.html 的
-   status-bar-style: black-translucent，海滩图延伸到顶部，消除黑条。 */
+   status-bar-style: black-translucent，图延伸到顶部，消除黑条。
+   light 主题引用 /bg-light.jpg —— 图不存在时 404，露出 --paper 米白兜底。 */
 .bg {
   position: fixed;
   inset: 0;
-  /* 主图：本地 public/bg.jpg */
-  background: url('/bg.jpg') center/cover no-repeat;
-  background-color: #171311;
+  background: var(--bg-image) center/cover no-repeat;
+  background-color: rgb(var(--paper));
   z-index: 0;
 }
 
-/* 首页遮罩：轻，保留图本身的暖调，只压一点保证白字可读 */
+/* 首页遮罩：轻，保留图本身的调子，只压一点保证文字可读 */
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(20,17,14,0.40);
+  background: rgba(var(--veil),0.40);
   z-index: 1;
 }
 
-/* 副屏遮罩：竖向渐变 vignette——顶/底压深保证白字可读，中段放浅让室内图透气，
-   不再是一整块死黑。 */
+/* 副屏遮罩：竖向渐变 vignette——顶/底压重保证文字可读，中段放浅让图透气 */
 .overlay-dark {
   position: fixed;
   inset: 0;
   background: linear-gradient(
     to bottom,
-    rgba(0,0,0,0.80) 0%,
-    rgba(0,0,0,0.55) 20%,
-    rgba(0,0,0,0.55) 78%,
-    rgba(0,0,0,0.82) 100%
+    rgba(var(--veil),0.80) 0%,
+    rgba(var(--veil),0.55) 20%,
+    rgba(var(--veil),0.55) 78%,
+    rgba(var(--veil),0.82) 100%
   );
   z-index: 1;
 }
@@ -59,8 +79,8 @@ html, body {
 .safe-screen { /* reserved */ }
 
 .glass {
-  background: rgba(148,163,172,0.18);
+  background: rgba(var(--glass), var(--glass-a));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 0.5px solid rgba(255,255,255,0.15);
+  border: 0.5px solid rgba(var(--ink),0.15);
 }

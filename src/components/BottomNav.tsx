@@ -18,10 +18,10 @@ export default function BottomNav({ current, onNavigate }: { current: Page; onNa
     <div style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
       zIndex: 100,
-      background: 'rgba(38,32,28,0.55)',
+      background: 'rgba(var(--veil),0.55)',
       backdropFilter: 'blur(20px)',
       WebkitBackdropFilter: 'blur(20px)',
-      borderTop: '0.5px solid rgba(255,255,255,0.1)',
+      borderTop: '0.5px solid rgba(var(--ink),0.1)',
       padding: '7px 6px calc(7px + env(safe-area-inset-bottom, 0px))',
     }}>
       <div style={{
@@ -38,7 +38,7 @@ export default function BottomNav({ current, onNavigate }: { current: Page; onNa
                 background: 'none', border: 'none', cursor: 'pointer',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
                 padding: '3px 7px',
-                color: active ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.4)',
+                color: active ? 'rgba(var(--ink),0.95)' : 'rgba(var(--ink),0.4)',
                 transition: 'color 0.2s',
               }}
             >
@@ -46,7 +46,7 @@ export default function BottomNav({ current, onNavigate }: { current: Page; onNa
               <span style={{
                 fontFamily: "'Cormorant Garamond', serif",
                 fontSize: 8, letterSpacing: 1.2,
-                color: active ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.32)',
+                color: active ? 'rgba(var(--ink),0.8)' : 'rgba(var(--ink),0.32)',
               }}>
                 {item.label}
               </span>
@@ -62,14 +62,14 @@ export default function BottomNav({ current, onNavigate }: { current: Page; onNa
             background: 'none', border: 'none', cursor: 'pointer',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
             padding: '3px 7px',
-            color: 'rgba(255,255,255,0.4)',
+            color: 'rgba(var(--ink),0.4)',
           }}
         >
           <Icon name="ombre" size={19} />
           <span style={{
             fontFamily: "'Cormorant Garamond', serif",
             fontSize: 8, letterSpacing: 1.2,
-            color: 'rgba(255,255,255,0.32)',
+            color: 'rgba(var(--ink),0.32)',
           }}>
             ombre
           </span>

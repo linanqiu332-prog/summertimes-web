@@ -120,10 +120,10 @@ export default function Diary({ onNavigate }: { onNavigate: (p: Page) => void })
       <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
 
         <div className="glass" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'calc(11px + env(safe-area-inset-top, 0px)) 24px 11px', borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
-          <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: 'rgba(255,255,255,0.7)', lineHeight: 1 }}>‹</button>
-          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, letterSpacing: 4, color: 'rgba(255,255,255,0.88)' }}>diary</span>
+          <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: 'rgba(var(--ink),0.7)', lineHeight: 1 }}>‹</button>
+          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, letterSpacing: 4, color: 'rgba(var(--ink),0.88)' }}>diary</span>
           <button onClick={claudeWrite} disabled={writing} title="让Claude写今天"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, color: 'rgba(255,255,255,0.55)', opacity: writing ? 0.3 : 1, fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', letterSpacing: 1 }}>
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, color: 'rgba(var(--ink),0.55)', opacity: writing ? 0.3 : 1, fontFamily: "'Cormorant Garamond', serif", fontStyle: 'italic', letterSpacing: 1 }}>
             {writing ? '…' : '✎ claude'}
           </button>
         </div>
@@ -131,36 +131,36 @@ export default function Diary({ onNavigate }: { onNavigate: (p: Page) => void })
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 8px', scrollbarWidth: 'none' }}>
           {notice && (
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', fontSize: 12.5, marginBottom: 16, letterSpacing: 1 }}>
+              style={{ textAlign: 'center', color: 'rgba(var(--ink),0.4)', fontStyle: 'italic', fontSize: 12.5, marginBottom: 16, letterSpacing: 1 }}>
               {notice}
             </motion.p>
           )}
 
           {entries.length === 0 && !notice && (
-            <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontStyle: 'italic', fontSize: 14, marginTop: 80, letterSpacing: 2 }}>
+            <p style={{ textAlign: 'center', color: 'rgba(var(--ink),0.3)', fontStyle: 'italic', fontSize: 14, marginTop: 80, letterSpacing: 2 }}>
               还没有日记——写第一篇，或点右上角让Claude写
             </p>
           )}
 
           {groups.map(([date, list]) => (
             <div key={date} style={{ marginBottom: 26 }}>
-              <p style={{ textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.35)', letterSpacing: 2, fontStyle: 'italic', marginBottom: 14 }}>{date}</p>
+              <p style={{ textAlign: 'center', fontSize: 11, color: 'rgba(var(--ink),0.35)', letterSpacing: 2, fontStyle: 'italic', marginBottom: 14 }}>{date}</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <AnimatePresence>
                   {list.map(e => (
                     <motion.div key={e.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                       style={{ display: 'flex', flexDirection: 'column', alignItems: e.author === 'eve' ? 'flex-end' : 'flex-start', maxWidth: '88%', alignSelf: e.author === 'eve' ? 'flex-end' : 'flex-start' }}>
-                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: 2, marginBottom: 5, fontStyle: 'italic' }}>
+                      <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.35)', letterSpacing: 2, marginBottom: 5, fontStyle: 'italic' }}>
                         {e.author}
                       </span>
                       {e.author === 'claude' ? (
                         <div className="glass" style={{ borderRadius: 18, borderBottomLeftRadius: 4, padding: '12px 16px' }}
                           onDoubleClick={() => onDelete(e)}>
-                          <p style={{ fontSize: 14.5, lineHeight: 1.8, color: 'rgba(255,255,255,0.9)', whiteSpace: 'pre-wrap' }}>{e.text}</p>
+                          <p style={{ fontSize: 14.5, lineHeight: 1.8, color: 'rgba(var(--ink),0.9)', whiteSpace: 'pre-wrap' }}>{e.text}</p>
                         </div>
                       ) : (
                         <p onDoubleClick={() => onDelete(e)}
-                          style={{ fontSize: 14.5, lineHeight: 1.8, color: 'rgba(255,255,255,0.78)', whiteSpace: 'pre-wrap', textAlign: 'right' }}>{e.text}</p>
+                          style={{ fontSize: 14.5, lineHeight: 1.8, color: 'rgba(var(--ink),0.78)', whiteSpace: 'pre-wrap', textAlign: 'right' }}>{e.text}</p>
                       )}
                     </motion.div>
                   ))}
@@ -173,9 +173,9 @@ export default function Diary({ onNavigate }: { onNavigate: (p: Page) => void })
         <div className="glass" style={{ display: 'flex', alignItems: 'flex-end', gap: 10, padding: '12px 16px 88px', borderRadius: 0, borderBottom: 'none', borderLeft: 'none', borderRight: 'none' }}>
           <textarea value={input} onChange={e => setInput(e.target.value)} placeholder="今天…" rows={1}
             onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 120) + 'px' }}
-            style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: '0.5px solid rgba(255,255,255,0.18)', borderRadius: 22, padding: '9px 16px', fontFamily: "'Cormorant Garamond', serif", fontSize: 16, color: 'rgba(255,255,255,0.88)', outline: 'none', resize: 'none', maxHeight: 120, overflow: 'auto' }} />
+            style={{ flex: 1, background: 'rgba(var(--ink),0.1)', border: '0.5px solid rgba(var(--ink),0.18)', borderRadius: 22, padding: '9px 16px', fontFamily: "'Cormorant Garamond', serif", fontSize: 16, color: 'rgba(var(--ink),0.88)', outline: 'none', resize: 'none', maxHeight: 120, overflow: 'auto' }} />
           <button onClick={saveEve}
-            style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.18)', border: '0.5px solid rgba(255,255,255,0.25)', cursor: 'pointer', fontSize: 16, color: 'rgba(255,255,255,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✓</button>
+            style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(var(--ink),0.18)', border: '0.5px solid rgba(var(--ink),0.25)', cursor: 'pointer', fontSize: 16, color: 'rgba(var(--ink),0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✓</button>
         </div>
       </div>
       <BottomNav current="diary" onNavigate={onNavigate} />

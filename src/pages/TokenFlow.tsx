@@ -29,10 +29,10 @@ function StatCard({ label, sub, value, sub2 }: { label: string; sub: string; val
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       className="glass" style={{ borderRadius: 14, padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: 2.5, fontStyle: 'italic' }}>{label}</p>
-      <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', letterSpacing: 1, fontFamily: 'monospace' }}>{sub}</p>
-      <p style={{ fontSize: 20, fontWeight: 300, color: 'rgba(255,255,255,0.9)', letterSpacing: 0.5, fontFamily: 'monospace' }}>{value}</p>
-      {sub2 && <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: 1, fontFamily: 'monospace' }}>{sub2}</p>}
+      <p style={{ fontSize: 9, color: 'rgba(var(--ink),0.35)', letterSpacing: 2.5, fontStyle: 'italic' }}>{label}</p>
+      <p style={{ fontSize: 10, color: 'rgba(var(--ink),0.25)', letterSpacing: 1, fontFamily: 'monospace' }}>{sub}</p>
+      <p style={{ fontSize: 20, fontWeight: 300, color: 'rgba(var(--ink),0.9)', letterSpacing: 0.5, fontFamily: 'monospace' }}>{value}</p>
+      {sub2 && <p style={{ fontSize: 10, color: 'rgba(var(--ink),0.35)', letterSpacing: 1, fontFamily: 'monospace' }}>{sub2}</p>}
     </motion.div>
   )
 }
@@ -74,8 +74,8 @@ export default function TokenFlow({ onNavigate }: { onNavigate: (p: Page) => voi
 
         {/* header */}
         <div className="glass" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'calc(11px + env(safe-area-inset-top, 0px)) 24px 11px', borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
-          <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: 'rgba(255,255,255,0.7)', lineHeight: 1 }}>‹</button>
-          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, letterSpacing: 4, color: 'rgba(255,255,255,0.88)' }}>token flow</span>
+          <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: 'rgba(var(--ink),0.7)', lineHeight: 1 }}>‹</button>
+          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, letterSpacing: 4, color: 'rgba(var(--ink),0.88)' }}>token flow</span>
           <span style={{ width: 24 }} />
         </div>
 
@@ -85,16 +85,16 @@ export default function TokenFlow({ onNavigate }: { onNavigate: (p: Page) => voi
           <div style={{ display: 'flex', gap: 8, marginBottom: 16, fontFamily: 'monospace' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <span style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(180,210,200,0.7)', display: 'inline-block' }} />
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: 0.5 }}>input $3/M</span>
+              <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.35)', letterSpacing: 0.5 }}>input $3/M</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <span style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(210,190,155,0.7)', display: 'inline-block' }} />
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: 0.5 }}>output $15/M</span>
+              <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.35)', letterSpacing: 0.5 }}>output $15/M</span>
             </div>
             {totalCache > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                 <span style={{ width: 8, height: 8, borderRadius: 2, background: 'rgba(180,180,210,0.5)', display: 'inline-block' }} />
-                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: 0.5 }}>cache $0.3/M</span>
+                <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.35)', letterSpacing: 0.5 }}>cache $0.3/M</span>
               </div>
             )}
           </div>
@@ -102,12 +102,12 @@ export default function TokenFlow({ onNavigate }: { onNavigate: (p: Page) => voi
           {/* today console block */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             className="glass" style={{ borderRadius: 16, padding: '18px 16px', marginBottom: 16, fontFamily: 'monospace' }}>
-            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: 3, marginBottom: 14 }}>today</p>
+            <p style={{ fontSize: 10, color: 'rgba(var(--ink),0.3)', letterSpacing: 3, marginBottom: 14 }}>today</p>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 0' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 11, color: 'rgba(180,210,200,0.6)', width: 14 }}>↑</span>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>input</span>
+                <span style={{ fontSize: 11, color: 'rgba(var(--ink),0.5)' }}>input</span>
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 <span style={{ fontSize: 13, color: 'rgba(180,210,200,0.85)' }}>{todayEntry.input.toLocaleString()}</span>
@@ -116,7 +116,7 @@ export default function TokenFlow({ onNavigate }: { onNavigate: (p: Page) => voi
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 11, color: 'rgba(210,190,155,0.6)', width: 14 }}>↓</span>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>output</span>
+                <span style={{ fontSize: 11, color: 'rgba(var(--ink),0.5)' }}>output</span>
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 <span style={{ fontSize: 13, color: 'rgba(210,190,155,0.85)' }}>{todayEntry.output.toLocaleString()}</span>
@@ -126,7 +126,7 @@ export default function TokenFlow({ onNavigate }: { onNavigate: (p: Page) => voi
               {todayEntry.cache > 0 && (<>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 11, color: 'rgba(180,180,210,0.5)', width: 14 }}>⚡</span>
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>cache</span>
+                  <span style={{ fontSize: 11, color: 'rgba(var(--ink),0.5)' }}>cache</span>
                 </div>
                 <div style={{ display: 'flex', gap: 12 }}>
                   <span style={{ fontSize: 13, color: 'rgba(180,180,210,0.7)' }}>{todayEntry.cache.toLocaleString()}</span>
@@ -135,9 +135,9 @@ export default function TokenFlow({ onNavigate }: { onNavigate: (p: Page) => voi
               </>)}
             </div>
 
-            <div style={{ marginTop: 14, paddingTop: 12, borderTop: '0.5px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', letterSpacing: 2 }}>total cost</span>
-              <span style={{ fontSize: 18, color: 'rgba(255,255,255,0.85)', fontWeight: 300 }}>{fmtCost(toCost(todayEntry))}</span>
+            <div style={{ marginTop: 14, paddingTop: 12, borderTop: '0.5px solid rgba(var(--ink),0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.3)', letterSpacing: 2 }}>total cost</span>
+              <span style={{ fontSize: 18, color: 'rgba(var(--ink),0.85)', fontWeight: 300 }}>{fmtCost(toCost(todayEntry))}</span>
             </div>
           </motion.div>
 
@@ -172,9 +172,9 @@ export default function TokenFlow({ onNavigate }: { onNavigate: (p: Page) => voi
 
           {/* stacked bar chart */}
           <div className="glass" style={{ borderRadius: 16, padding: '20px 16px', marginBottom: 20 }}>
-            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', letterSpacing: 3, fontStyle: 'italic', marginBottom: 16 }}>recent 14 days</p>
+            <p style={{ fontSize: 11, color: 'rgba(var(--ink),0.4)', letterSpacing: 3, fontStyle: 'italic', marginBottom: 16 }}>recent 14 days</p>
             {days.length === 0 ? (
-              <p style={{ color: 'rgba(255,255,255,0.25)', fontStyle: 'italic', fontSize: 13, letterSpacing: 2, textAlign: 'center', padding: '20px 0' }}>no data yet</p>
+              <p style={{ color: 'rgba(var(--ink),0.25)', fontStyle: 'italic', fontSize: 13, letterSpacing: 2, textAlign: 'center', padding: '20px 0' }}>no data yet</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {days.map(({ date, entry }) => {
@@ -185,14 +185,14 @@ export default function TokenFlow({ onNavigate }: { onNavigate: (p: Page) => voi
                   const cost   = toCost(entry)
                   return (
                     <div key={date} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', width: 32, flexShrink: 0, letterSpacing: 1 }}>{label}</span>
-                      <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden', display: 'flex' }}>
+                      <span style={{ fontSize: 11, color: 'rgba(var(--ink),0.4)', width: 32, flexShrink: 0, letterSpacing: 1 }}>{label}</span>
+                      <div style={{ flex: 1, height: 6, background: 'rgba(var(--ink),0.08)', borderRadius: 3, overflow: 'hidden', display: 'flex' }}>
                         <motion.div initial={{ width: 0 }} animate={{ width: `${inPct}%` }} transition={{ duration: 0.6 }}
                           style={{ height: '100%', background: 'rgba(180,210,200,0.65)', borderRadius: '3px 0 0 3px', flexShrink: 0 }} />
                         <motion.div initial={{ width: 0 }} animate={{ width: `${outPct}%` }} transition={{ duration: 0.6, delay: 0.1 }}
                           style={{ height: '100%', background: 'rgba(210,190,155,0.65)', flexShrink: 0 }} />
                       </div>
-                      <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', width: 52, textAlign: 'right', letterSpacing: 0.5, fontFamily: 'monospace' }}>{fmtCost(cost)}</span>
+                      <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.35)', width: 52, textAlign: 'right', letterSpacing: 0.5, fontFamily: 'monospace' }}>{fmtCost(cost)}</span>
                     </div>
                   )
                 })}
@@ -202,15 +202,15 @@ export default function TokenFlow({ onNavigate }: { onNavigate: (p: Page) => voi
 
           {/* console log */}
           <div style={{ fontFamily: 'monospace' }}>
-            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', letterSpacing: 3, marginBottom: 12 }}>— console log —</p>
+            <p style={{ fontSize: 10, color: 'rgba(var(--ink),0.25)', letterSpacing: 3, marginBottom: 12 }}>— console log —</p>
             {days.slice(0, 7).map(({ date, entry }) => (
-              <div key={date} style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, borderLeft: '2px solid rgba(255,255,255,0.08)' }}>
-                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginBottom: 5 }}>{new Date(date).toLocaleDateString()}</p>
+              <div key={date} style={{ marginBottom: 10, padding: '8px 10px', background: 'rgba(var(--ink),0.03)', borderRadius: 8, borderLeft: '2px solid rgba(var(--ink),0.08)' }}>
+                <p style={{ fontSize: 10, color: 'rgba(var(--ink),0.25)', marginBottom: 5 }}>{new Date(date).toLocaleDateString()}</p>
                 <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 11, color: 'rgba(180,210,200,0.65)' }}>↑ {entry.input.toLocaleString()}</span>
                   <span style={{ fontSize: 11, color: 'rgba(210,190,155,0.65)' }}>↓ {entry.output.toLocaleString()}</span>
                   {entry.cache > 0 && <span style={{ fontSize: 11, color: 'rgba(180,180,210,0.5)' }}>⚡ {entry.cache.toLocaleString()}</span>}
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{fmtCost(toCost(entry))}</span>
+                  <span style={{ fontSize: 11, color: 'rgba(var(--ink),0.3)' }}>{fmtCost(toCost(entry))}</span>
                 </div>
               </div>
             ))}

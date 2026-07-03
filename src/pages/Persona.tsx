@@ -23,24 +23,24 @@ function PersonaCard({ title, sub, value, placeholder, onSave, onReset }: {
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
       className="glass" style={{ borderRadius: 18, padding: '18px 18px 14px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, letterSpacing: 3, color: 'rgba(255,255,255,0.88)' }}>{title}</span>
-        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', letterSpacing: 1.5, fontStyle: 'italic' }}>{sub}</span>
+        <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 17, letterSpacing: 3, color: 'rgba(var(--ink),0.88)' }}>{title}</span>
+        <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.35)', letterSpacing: 1.5, fontStyle: 'italic' }}>{sub}</span>
       </div>
       <textarea value={text} onChange={e => setText(e.target.value)} placeholder={placeholder} rows={6}
-        style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.07)', border: '0.5px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: '12px 14px', fontFamily: "'Cormorant Garamond', serif", fontSize: 14.5, lineHeight: 1.8, color: 'rgba(255,255,255,0.88)', outline: 'none', resize: 'vertical', minHeight: 120 }} />
+        style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(var(--ink),0.07)', border: '0.5px solid rgba(var(--ink),0.15)', borderRadius: 12, padding: '12px 14px', fontFamily: "'Cormorant Garamond', serif", fontSize: 14.5, lineHeight: 1.8, color: 'rgba(var(--ink),0.88)', outline: 'none', resize: 'vertical', minHeight: 120 }} />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
-        <span style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.3)', letterSpacing: 1, fontStyle: 'italic' }}>
+        <span style={{ fontSize: 10.5, color: 'rgba(var(--ink),0.3)', letterSpacing: 1, fontStyle: 'italic' }}>
           {saved ? '已保存 · 下一条消息生效' : `${text.length} 字`}
         </span>
         <div style={{ display: 'flex', gap: 8 }}>
           {onReset && (
             <button onClick={() => { setText(PERSONA_DEFAULT); onReset() }}
-              style={{ background: 'none', border: '0.5px solid rgba(255,255,255,0.2)', borderRadius: 14, padding: '5px 14px', cursor: 'pointer', fontSize: 11.5, color: 'rgba(255,255,255,0.5)', letterSpacing: 1, fontFamily: "'Cormorant Garamond', serif" }}>
+              style={{ background: 'none', border: '0.5px solid rgba(var(--ink),0.2)', borderRadius: 14, padding: '5px 14px', cursor: 'pointer', fontSize: 11.5, color: 'rgba(var(--ink),0.5)', letterSpacing: 1, fontFamily: "'Cormorant Garamond', serif" }}>
               恢复默认
             </button>
           )}
           <button onClick={save} disabled={!dirty}
-            style={{ background: dirty ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.06)', border: '0.5px solid rgba(255,255,255,0.25)', borderRadius: 14, padding: '5px 16px', cursor: dirty ? 'pointer' : 'default', fontSize: 11.5, color: dirty ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.3)', letterSpacing: 1, fontFamily: "'Cormorant Garamond', serif" }}>
+            style={{ background: dirty ? 'rgba(var(--ink),0.18)' : 'rgba(var(--ink),0.06)', border: '0.5px solid rgba(var(--ink),0.25)', borderRadius: 14, padding: '5px 16px', cursor: dirty ? 'pointer' : 'default', fontSize: 11.5, color: dirty ? 'rgba(var(--ink),0.85)' : 'rgba(var(--ink),0.3)', letterSpacing: 1, fontFamily: "'Cormorant Garamond', serif" }}>
             保存
           </button>
         </div>
@@ -59,13 +59,13 @@ export default function Persona({ onNavigate }: { onNavigate: (p: Page) => void 
       <div style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
 
         <div className="glass" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'calc(11px + env(safe-area-inset-top, 0px)) 24px 11px', borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
-          <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: 'rgba(255,255,255,0.7)', lineHeight: 1 }}>‹</button>
-          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, letterSpacing: 4, color: 'rgba(255,255,255,0.88)' }}>persona</span>
+          <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: 'rgba(var(--ink),0.7)', lineHeight: 1 }}>‹</button>
+          <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, letterSpacing: 4, color: 'rgba(var(--ink),0.88)' }}>persona</span>
           <span style={{ width: 24 }} />
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 96px', scrollbarWidth: 'none', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <p style={{ textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.35)', letterSpacing: 2, fontStyle: 'italic', margin: '4px 0 2px' }}>
+          <p style={{ textAlign: 'center', fontSize: 11, color: 'rgba(var(--ink),0.35)', letterSpacing: 2, fontStyle: 'italic', margin: '4px 0 2px' }}>
             who we are, in our own words
           </p>
 
