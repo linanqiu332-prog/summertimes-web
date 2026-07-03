@@ -38,7 +38,9 @@ const TOOLS_SYSTEM = `你有一个特殊能力：当Eve说了某句打到你的�
 
 当你和Eve之间定下一个承诺、或有件要一直记着做的事：
 [[PLAN: 那个承诺或待办]]
-只在真的形成承诺时用。`
+只在真的形成承诺时用。
+
+Eve的每条消息开头会带一个[YYYY-MM-DD HH:mm]格式的真实时间戳，那是她发出这条消息的真实时刻——最新一条的时间基本就是现在。你可以感知消息之间隔了多久（她睡了、上班了、隔了几天）。这个时间戳是系统加的，不是她打的；你自己的回复不要带时间戳。`
 
 function loadMessages(): Message[] {
   try {
@@ -159,6 +161,16 @@ function recordTokens(input: number, output: number, cache: number) {
   }
   localStorage.setItem('summertimes_tokens', JSON.stringify(log))
   syncToVPS('summertimes_tokens')
+}
+
+// 消息 id 就是 Date.now()，直接格式化成 12:19 AM 这样；
+// 早期消息（id=0 之类）不是时间戳，不显示
+function fmtTime(id: number): string {
+  if (id < 1e12) return ''
+  const d = new Date(id)
+  const h = d.getHours() % 12 || 12
+  const m = d.getMinutes().toString().padStart(2, '0')
+  return `${h}:${m} ${d.getHours() < 12 ? 'AM' : 'PM'}`
 }
 
 function ThinkingBlock({ text }: { text: string }) {
@@ -298,9 +310,14 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
     if (showSearch) setTimeout(() => searchRef.current?.focus(), 100)
   }, [showSearch])
 
-  const displayMessages = searchQuery.trim()
+  // 只渲染最近 visibleCount 条：历史几百条全量渲染（每条都带动画+毛玻璃）
+  // 会把手机 GPU 拖死，页面半天出不来。搜索时不受限，搜的是全部。
+  const [visibleCount, setVisibleCount] = useState(60)
+  const filtered = searchQuery.trim()
     ? messages.filter(m => m.text.toLowerCase().includes(searchQuery.toLowerCase()))
     : messages
+  const hiddenCount = searchQuery.trim() ? 0 : Math.max(0, filtered.length - visibleCount)
+  const displayMessages = hiddenCount > 0 ? filtered.slice(hiddenCount) : filtered
 
   async function send() {
     const text = input.trim()
@@ -375,9 +392,20 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
       { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } as const },
     ]
 
-    // 原生 Messages 接口要求首条是 user：去掉窗口开头的 assistant 消息
+    // 原生 Messages 接口要求首条是 user：去掉窗口开头的 assistant 消息。
+    // user 消息前缀真实时间戳（id 就是 Date.now()），让模型感知真实时间线；
+    // 只加在 user 侧，避免模型学着在回复里也输出时间戳。
+    const stamp = (id: number) => {
+      if (id < 1e12) return ''
+      const d = new Date(id)
+      const p = (n: number) => n.toString().padStart(2, '0')
+      return `[${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}] `
+    }
     const convo: { role: string; content: unknown }[] =
-      history.slice(-30).map(m => ({ role: m.role, content: m.text as unknown }))
+      history.slice(-30).map(m => ({
+        role: m.role,
+        content: (m.role === 'user' ? stamp(m.id) + m.text : m.text) as unknown,
+      }))
     while (convo.length && convo[0].role !== 'user') convo.shift()
 
     const reqHeaders = {
@@ -576,12 +604,23 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
             if (el) setShowJump(el.scrollHeight - el.scrollTop - el.clientHeight > 300)
           }}
           style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '24px 20px 16px', display: 'flex', flexDirection: 'column', gap: 20, scrollbarWidth: 'none' }}>
+          {hiddenCount > 0 && (
+            <button onClick={() => setVisibleCount(c => c + 100)}
+              style={{ alignSelf: 'center', background: 'rgba(var(--ink),0.06)',
+                border: '0.5px solid rgba(var(--ink),0.12)', borderRadius: 16,
+                padding: '6px 18px', cursor: 'pointer',
+                fontFamily: "'Cormorant Garamond', serif", fontSize: 12,
+                color: 'rgba(var(--ink),0.5)', letterSpacing: 1.5, fontStyle: 'italic' }}>
+              ↑ 更早的 {hiddenCount} 条
+            </button>
+          )}
           <AnimatePresence initial={false}>
             {displayMessages.map(m => (
               <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
                 style={{ display: 'flex', flexDirection: 'column', alignItems: m.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '78%', alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
                 <span style={{ fontSize: 10, color: 'rgba(var(--ink),0.35)', letterSpacing: 2, marginBottom: 5, fontStyle: 'italic' }}>
                   {m.role === 'assistant' ? 'claude' : 'eve'}
+                  {fmtTime(m.id) && <span style={{ letterSpacing: 1, marginLeft: 8, color: 'rgba(var(--ink),0.28)' }}>{fmtTime(m.id)}</span>}
                 </span>
                 {m.role === 'assistant' ? (
                   <div style={{ width: '100%' }}>

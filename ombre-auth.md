@@ -60,3 +60,36 @@ Claude Desktop 里确认 12 个工具还在、`breath` 能出内容。
 ## 回滚
 
 删掉两段 `if` → `nginx -t && systemctl reload nginx`，Desktop 配置里的 header 留着也无害。
+
+---
+
+# Cloudflare Access：给 summertimes.app 整站加登录（Sprint 10 追加）
+
+效果：打开网站先输邮箱收验证码，白名单只有 linanqiu332@gmail.com。挡所有人，包括翻源码的。App 内部 `/api` 走同域 cookie，登录一次后无感。
+
+**⚠️ 范围只包 `summertimes.app` + `www`，绝对不要包 `ombre.summertimes.app`**——Claude Desktop 的 mcp-remote 过不了 Access 的邮箱验证，包进去 12 个工具全断。ombre 那边已有 Bearer token，够了。
+
+## 步骤（Cloudflare 后台，约 5 分钟）
+
+1. dash.cloudflare.com → 选 summertimes.app 域 → **DNS**：确认 `summertimes.app` 和 `www` 两条 A 记录是 **Proxied（橙色云）**。灰色云的话点开切成橙色（Access 只对走 CF 代理的流量生效）。`ombre` 保持现状不动。
+2. 左侧 **Zero Trust**（首次进会让选团队名，随便起，选 **Free** 计划）。
+3. **Access → Applications → Add an application → Self-hosted**。
+   - Application name: `summertimes`
+   - Session Duration: **1 month**（多久重新验证一次，嫌烦可选更长）
+   - Public hostname 加两条：`summertimes.app`（路径留空）和 `www.summertimes.app`
+4. 建 Policy：
+   - Name: `only-eve`，Action: **Allow**
+   - Include → Selector 选 **Emails** → 填 `linanqiu332@gmail.com`
+5. 登录方式默认 **One-time PIN**（邮箱验证码）就行，一路 Next 保存。
+
+## 验证
+
+- 无痕窗口开 summertimes.app → 应跳 Cloudflare 登录页
+- 输 linanqiu332@gmail.com → 收 PIN → 进站，Chat/Memories 数据正常（说明 /api cookie 通了）
+- `curl -si https://summertimes.app/api/history | head -1` → 应该是 302（被踢去登录页），不再直接吐历史
+- Claude Desktop ⌘Q 重开 → 12 工具还在（确认 ombre 没被误伤）
+
+## 注意
+
+- 手机 PWA 到期重新验证时，会在 app 里弹 CF 登录页，输一次验证码即可。
+- Access 挡住后，nginx 那层要不要再给 `/api/` 加 token 都无所谓了，属于双保险。
