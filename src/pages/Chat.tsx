@@ -300,6 +300,7 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
   async function callHoldStart() {
     if (callStatus !== 'idle' || loading) return
     setCallError('')
+    unlockAudio()  // 趁着这次真实手势解锁播放器，回复才能自动出声
     if (typeof MediaRecorder === 'undefined') { callFail('这个浏览器不支持录音'); return }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -342,6 +343,18 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
   const [loadingId, setLoadingId] = useState<number | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const audioCache = useRef<Map<number, string>>(new Map())  // 消息id → blob url，避免重复扣额度
+  // 共享播放器：在用户手势里"解锁"过一次后，iOS 才允许之后异步链路里的自动播放
+  const sharedAudio = useRef<HTMLAudioElement | null>(null)
+  function getAudio(): HTMLAudioElement {
+    if (!sharedAudio.current) sharedAudio.current = new Audio()
+    return sharedAudio.current
+  }
+  function unlockAudio() {
+    // 必须在触摸/点击手势内同步调用；播一段 0 采样的静音 wav 骗过 iOS
+    const a = getAudio()
+    a.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA='
+    a.play().catch(() => { /* noop */ })
+  }
 
   async function speak(m: Message) {
     // 正在放这条 → 停
@@ -356,7 +369,8 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
     audioRef.current = null
 
     async function playUrl(url: string) {
-      const audio = new Audio(url)
+      const audio = getAudio()   // 复用已解锁的共享播放器，语音通话的自动播放才不被 iOS 拦
+      audio.src = url
       audioRef.current = audio
       audio.onended = () => setPlayingId(null)
       await audio.play()
