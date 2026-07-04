@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, httpx, asyncio, os, sqlite3
+import json, httpx, asyncio, os, re, sqlite3
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # ── 聊天记录持久化 ───────────────────────────────────────
@@ -158,18 +158,31 @@ def tts_audio(text: str) -> bytes:
     if not ELEVEN_KEY:
         return b""
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVEN_VOICE}"
-    r = httpx.post(url, timeout=60,
-        headers={"xi-api-key": ELEVEN_KEY, "Content-Type": "application/json"},
-        json={"text": text, "model_id": "eleven_multilingual_v2",
-              "output_format": "mp3_44100_128",
-              "voice_settings": {
-                  "stability": 0.4,        # 低一点 → 年龄感降、声音更活
-                  "similarity_boost": 0.8,
-                  "style": 0.15,           # 一点点 style → 更有生气
-                  "speed": 1.08            # 稍快一点点
-              }})
-    if r.status_code == 200:
-        return r.content
+    # 首选 eleven_v3：认识文本里的 [softly] [sighs] 等 audio tags，按情绪读；
+    # v3 出错（账号不支持/参数不合）自动回退 v2，剥掉标签照常出声。
+    attempts = [
+        ("eleven_v3", text, {
+            "stability": 0.5,            # v3 只认 0.0/0.5/1.0：Natural
+            "similarity_boost": 0.8,
+        }),
+        ("eleven_multilingual_v2", re.sub(r"\[[a-zA-Z ]{2,20}\]", "", text), {
+            "stability": 0.4,            # 低一点 → 年龄感降、声音更活
+            "similarity_boost": 0.8,
+            "style": 0.15,               # 一点点 style → 更有生气
+            "speed": 1.08                # 稍快一点点
+        }),
+    ]
+    for model_id, t, settings in attempts:
+        try:
+            r = httpx.post(url, timeout=90,
+                headers={"xi-api-key": ELEVEN_KEY, "Content-Type": "application/json"},
+                json={"text": t, "model_id": model_id,
+                      "output_format": "mp3_44100_128",
+                      "voice_settings": settings})
+            if r.status_code == 200:
+                return r.content
+        except Exception:
+            pass
     return b""
 
 class Handler(BaseHTTPRequestHandler):

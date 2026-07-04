@@ -173,6 +173,29 @@ function fmtTime(id: number): string {
   return `${h}:${m} ${d.getHours() < 12 ? 'AM' : 'PM'}`
 }
 
+// 点 listen 时先给文本插 ElevenLabs v3 audio tags（[softly] 等），
+// 让声音跟着情绪走；（动作描写）转成语气或删掉，免得被当台词念出来。
+// 失败就用原文，照常能听。结果随音频一起缓存，每条消息只标注一次。
+async function addAudioTags(text: string): Promise<string> {
+  try {
+    const r = await fetch(MESSAGES_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: MODEL, max_tokens: 2000,
+        system: '你是 ElevenLabs v3 的语音标注器。给用户发来的文本插入英文 audio tags（可用：[softly] [warm] [whispers] [sighs] [pause] [playful] [teasing] [serious] [tender] [smiling]），让朗读符合文本的情绪。规则：①原文的文字一个都不许改、不许删；②中文圆括号里的动作描写（如（伸手）（顿））删掉，视情况换成等义的 tag；③标签要克制，一两处就够；④只输出处理后的文本，不要任何解释。',
+        messages: [{ role: 'user', content: text }],
+      }),
+    })
+    const data = await r.json()
+    const out = (data?.content || [])
+      .filter((b: { type: string }) => b.type === 'text')
+      .map((b: { text?: string }) => b.text || '')
+      .join('')
+    return out.trim() || text
+  } catch { return text }
+}
+
 function ThinkingBlock({ text }: { text: string }) {
   const [open, setOpen] = useState(false)
   return (
@@ -244,10 +267,11 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
 
     setLoadingId(m.id)
     try {
+      const tagged = await addAudioTags(m.text)
       const r = await fetch(`${BRIDGE}/tts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: m.text }),
+        body: JSON.stringify({ text: tagged }),
       })
       if (!r.ok) throw new Error('tts failed')
       const blob = await r.blob()
