@@ -19,6 +19,29 @@ type Message = {
   text: string
   thinking?: string
   marked?: string
+  image?: string   // data URL（已压缩的 jpeg），发图用
+}
+
+// 手机上 Enter 换行、只用 ↑ 按钮发送；桌面保持 Enter 发送、Shift+Enter 换行
+const IS_TOUCH = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+
+// 选图后压到最长边 900px 的 jpeg，控制 localStorage 和 token 开销
+function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      const max = 900
+      let w = img.width, h = img.height
+      if (w > max || h > max) { const s = max / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s) }
+      const c = document.createElement('canvas')
+      c.width = w; c.height = h
+      c.getContext('2d')!.drawImage(img, 0, 0, w, h)
+      URL.revokeObjectURL(img.src)
+      resolve(c.toDataURL('image/jpeg', 0.75))
+    }
+    img.onerror = reject
+    img.src = URL.createObjectURL(file)
+  })
 }
 
 type TokenUsage = { input: number; output: number; cache: number }
@@ -230,6 +253,8 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
   const [memory, setMemory] = useState('')
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [pendingImage, setPendingImage] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -345,11 +370,13 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
 
   async function send() {
     const text = input.trim()
-    if (!text || loading) return
+    if ((!text && !pendingImage) || loading) return
     const userMsg: Message = { id: Date.now(), role: 'user', text }
+    if (pendingImage) userMsg.image = pendingImage
     const newMessages = [...messages, userMsg]
     setMessages(newMessages)
     setInput('')
+    setPendingImage(null)
     setLoading(true)
     msgCountRef.current += 1
 
@@ -425,11 +452,24 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
       const p = (n: number) => n.toString().padStart(2, '0')
       return `[${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}] `
     }
-    const convo: { role: string; content: unknown }[] =
-      history.slice(-30).map(m => ({
-        role: m.role,
-        content: (m.role === 'user' ? stamp(m.id) + m.text : m.text) as unknown,
-      }))
+    // 带图消息：最近 6 条内的图原样发给模型（vision），更早的只留 [图片] 占位省 token
+    const win = history.slice(-30)
+    const convo: { role: string; content: unknown }[] = win.map((m, i) => {
+      const textPart = m.role === 'user' ? (stamp(m.id) + m.text).trim() : m.text
+      if (m.image && win.length - i <= 6) {
+        const match = m.image.match(/^data:(image\/\w+);base64,(.+)$/)
+        if (match) {
+          return {
+            role: m.role,
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: match[1], data: match[2] } },
+              ...(textPart ? [{ type: 'text', text: textPart }] : []),
+            ] as unknown,
+          }
+        }
+      }
+      return { role: m.role, content: (m.image ? `${textPart}\n[图片]`.trim() : textPart) as unknown }
+    })
     while (convo.length && convo[0].role !== 'user') convo.shift()
 
     const reqHeaders = {
@@ -574,7 +614,7 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
   }
 
   function handleKey(e: React.KeyboardEvent) {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
+    if (e.key === 'Enter' && !e.shiftKey && !IS_TOUCH) { e.preventDefault(); send() }
   }
 
   function clearHistory() {
@@ -675,7 +715,10 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
                     )}
                   </div>
                 ) : (
-                  <p style={{ fontSize: 15, lineHeight: 1.75, color: 'rgba(var(--ink),0.78)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{m.text}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                    {m.image && <img src={m.image} alt="" style={{ maxWidth: '100%', maxHeight: 260, borderRadius: 14, border: '0.5px solid rgba(var(--ink),0.15)' }} />}
+                    {m.text && <p style={{ fontSize: 15, lineHeight: 1.75, color: 'rgba(var(--ink),0.78)', overflowWrap: 'anywhere', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{m.text}</p>}
+                  </div>
                 )}
               </motion.div>
             ))}
@@ -704,7 +747,22 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
 
         {!showSearch && (
           <div className="glass" style={{ display: 'flex', flexDirection: 'column', gap: 0, padding: '12px 16px calc(20px + env(safe-area-inset-bottom, 0px))', borderRadius: 0, borderBottom: 'none', borderLeft: 'none', borderRight: 'none' }}>
+            {pendingImage && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 10 }}>
+                <img src={pendingImage} alt="" style={{ height: 64, borderRadius: 10, border: '0.5px solid rgba(var(--ink),0.2)' }} />
+                <button onClick={() => setPendingImage(null)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, color: 'rgba(var(--ink),0.5)', padding: 2 }}>×</button>
+              </div>
+            )}
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
+              <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={async e => {
+                  const f = e.target.files?.[0]
+                  if (f) { try { setPendingImage(await compressImage(f)) } catch { /* noop */ } }
+                  e.target.value = ''
+                }} />
+              <button onClick={() => fileRef.current?.click()} disabled={loading} title="发图"
+                style={{ width: 36, height: 36, borderRadius: '50%', background: 'none', border: '0.5px solid rgba(var(--ink),0.2)', cursor: 'pointer', fontSize: 17, color: 'rgba(var(--ink),0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: loading ? 0.4 : 1 }}>⊕</button>
               <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
                 placeholder="说点什么…" rows={1} disabled={loading}
                 style={{ flex: 1, background: 'rgba(var(--ink),0.1)', border: '0.5px solid rgba(var(--ink),0.18)', borderRadius: 22, padding: '9px 16px', fontFamily: "'Cormorant Garamond', serif", fontSize: 16, color: 'rgba(var(--ink),0.88)', outline: 'none', resize: 'none', maxHeight: 120, overflow: 'auto' }}
