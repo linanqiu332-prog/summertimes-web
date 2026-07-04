@@ -154,10 +154,13 @@ def web_search(query: str, n: int = 5) -> list:
     except Exception as e:
         return [{"title": "", "url": "", "snippet": f"搜索失败: {e}"}]
 
-def stt_text(audio: bytes, mime: str) -> str:
-    # 语音转文字：ElevenLabs scribe，自动认语言（中英混说也行）
-    if not ELEVEN_KEY or not audio:
-        return ""
+def stt_text(audio: bytes, mime: str) -> tuple:
+    # 语音转文字：ElevenLabs scribe，自动认语言（中英混说也行）。
+    # 返回 (text, error)——error 原样回给前端显示，别再无声失败。
+    if not ELEVEN_KEY:
+        return "", "no ELEVEN_API_KEY"
+    if not audio:
+        return "", "empty audio"
     ext = "mp4" if "mp4" in mime else ("webm" if "webm" in mime else "wav")
     try:
         r = httpx.post("https://api.elevenlabs.io/v1/speech-to-text",
@@ -165,10 +168,10 @@ def stt_text(audio: bytes, mime: str) -> str:
                        data={"model_id": "scribe_v1"},
                        files={"file": (f"audio.{ext}", audio, mime)})
         if r.status_code == 200:
-            return (r.json().get("text") or "").strip()
-    except Exception:
-        pass
-    return ""
+            return (r.json().get("text") or "").strip(), ""
+        return "", f"{r.status_code} {r.text[:160]}"
+    except Exception as e:
+        return "", str(e)[:160]
 
 def tts_audio(text: str) -> bytes:
     if not ELEVEN_KEY:
@@ -240,8 +243,8 @@ class Handler(BaseHTTPRequestHandler):
         # /stt 收原始音频字节，不能当 JSON 解析，单独处理
         if self.path == "/stt":
             raw = self.rfile.read(length) if length else b""
-            text = stt_text(raw, self.headers.get("Content-Type", "audio/webm"))
-            payload = json.dumps({"text": text}).encode()
+            text, err = stt_text(raw, self.headers.get("Content-Type", "audio/webm"))
+            payload = json.dumps({"text": text, "error": err}).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Access-Control-Allow-Origin", "*")

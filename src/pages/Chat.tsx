@@ -319,7 +319,7 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
           if (!r.ok) { callFail(`语音服务没接通（${r.status}）`); return }
           const d = await r.json()
           const heard = (d?.text || '').trim()
-          if (!heard) { callFail('没听清，再试一次'); return }
+          if (!heard) { callFail(d?.error ? `转文字失败：${d.error}` : '没听清，再试一次'); return }
           setCallStatus('idle')
           await send(heard, true)
         } catch { callFail('网络断了一下，再试一次') }
