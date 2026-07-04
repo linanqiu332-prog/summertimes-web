@@ -287,34 +287,47 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
   // voice call（对讲机）：按住录音 → /stt 转文字 → 正常聊天流程 → 回复自动播他的声音
   const [showCall, setShowCall] = useState(false)
   const [callStatus, setCallStatus] = useState<'idle' | 'rec' | 'stt'>('idle')
+  const [callError, setCallError] = useState('')
   const recRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
 
+  function callFail(msg: string) {
+    setCallStatus('idle')
+    setCallError(msg)
+    setTimeout(() => setCallError(''), 5000)
+  }
+
   async function callHoldStart() {
     if (callStatus !== 'idle' || loading) return
+    setCallError('')
+    if (typeof MediaRecorder === 'undefined') { callFail('这个浏览器不支持录音'); return }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mime = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/webm'
-      const rec = new MediaRecorder(stream, { mimeType: mime })
+      const mime = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4'
+        : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : ''
+      const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream)
+      const usedMime = mime || rec.mimeType || 'audio/webm'
       chunksRef.current = []
       rec.ondataavailable = e => { if (e.data.size) chunksRef.current.push(e.data) }
       rec.onstop = async () => {
         stream.getTracks().forEach(t => t.stop())
-        const blob = new Blob(chunksRef.current, { type: mime })
-        if (blob.size < 2000) { setCallStatus('idle'); return }  // 手滑碰了一下，忽略
+        const blob = new Blob(chunksRef.current, { type: usedMime })
+        if (blob.size < 1500) { callFail('太短了，按住多说一会儿'); return }
         setCallStatus('stt')
         try {
-          const r = await fetch(`${BRIDGE}/stt`, { method: 'POST', headers: { 'Content-Type': mime }, body: blob })
+          const r = await fetch(`${BRIDGE}/stt`, { method: 'POST', headers: { 'Content-Type': usedMime }, body: blob })
+          if (!r.ok) { callFail(`语音服务没接通（${r.status}）`); return }
           const d = await r.json()
           const heard = (d?.text || '').trim()
+          if (!heard) { callFail('没听清，再试一次'); return }
           setCallStatus('idle')
-          if (heard) await send(heard, true)
-        } catch { setCallStatus('idle') }
+          await send(heard, true)
+        } catch { callFail('网络断了一下，再试一次') }
       }
-      rec.start()
+      rec.start(250)  // iOS 上不给 timeslice 有时整段录音拿不到数据
       recRef.current = rec
       setCallStatus('rec')
-    } catch { setCallStatus('idle') }  // 没给麦克风权限
+    } catch { callFail('麦克风权限没给——去 设置→Safari→麦克风 打开') }
   }
   function callHoldEnd() {
     if (recRef.current?.state === 'recording') recRef.current.stop()
@@ -825,8 +838,8 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
               style={{ position: 'fixed', inset: 0, zIndex: 30, background: 'rgba(var(--veil),0.9)',
                 backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 30, padding: 32 }}>
-              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 12, letterSpacing: 4, fontStyle: 'italic', color: 'rgba(var(--ink),0.5)' }}>
-                {callStatus === 'rec' ? '在听…' : callStatus === 'stt' ? '听清了…' : loading ? '他在想…' : playingId !== null ? '他在说…' : 'voice'}
+              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 12, letterSpacing: 4, fontStyle: 'italic', color: callError ? 'rgba(220,150,140,0.9)' : 'rgba(var(--ink),0.5)' }}>
+                {callError ? callError : callStatus === 'rec' ? '在听…' : callStatus === 'stt' ? '听清了…' : loading ? '他在想…' : playingId !== null ? '他在说…' : 'voice'}
               </span>
               {(() => { const last = messages[messages.length - 1]
                 return last?.role === 'assistant' && last.id !== 0 ? (
