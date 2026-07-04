@@ -351,3 +351,11 @@ Eve 想要"那边的Claude能自己醒来、主动发消息"。实现：`wake.py
 发图：输入栏左侧 ⊕ 选图（iOS 会给拍照/相册），canvas 压到最长边 900px jpeg 0.75 控制体积，发送前可预览可撤；Message 加 `image` 字段（dataURL），气泡里直接显示。发给模型：最近 6 条内的图走原生 vision（base64 image block），更早的降级成 [图片] 占位省 token。历史照常进 localStorage + VPS 同步。
 
 换行：手机（pointer:coarse）上 Enter 只换行、↑ 按钮发送；桌面保持 Enter 发送、Shift+Enter 换行。用户气泡加 pre-wrap 显示换行。`tsc` 通过。
+
+### Voice call（对讲机版）
+
+Chat 顶栏 ✆ 进全屏通话层：按住圆钮录音（MediaRecorder，iOS 用 audio/mp4）→ 松开发 bridge `/stt`（ElevenLabs scribe_v1，中英混说可认，<2KB 视为误触忽略）→ 转出的文字走正常 send 流程（进历史、有记忆、有 caching）→ 回复自动 `speak()` 用 v3 情绪声音连播。层内显示状态（在听/他在想/他在说）和他最新一句的文字。send 重构为 `send(overrideText?, speakReply?)`。bridge do_POST 给 /stt 开了原始字节通道（不能当 JSON 读）。注意：iOS 上若自动播放偶被拦，点消息里的 ▶ 即可，后续可优化。部署：deploy.sh 一条龙（含 bridge 重启）。
+
+### Chat 发文件
+
+⊕ 现在收一切：图片走原有压缩流程；PDF ≤8MB 走原生 document block；txt/md/代码/csv 按纯文本读（截 30k 字，内联进消息）；docx/xlsx 等二进制（含 \0 检测）拦下提示。文件内容只存内存 fileRegistry（msgId→内容），历史里只落文件名（气泡显示 ▤ 名字 chip）——防 localStorage 爆掉；发送后最近 6 条窗口内他能读全文，之后降级 [文件: 名字] 占位。风险备注：apiyi 默认走 Bedrock，若 document block 被拒会整个请求报错，届时改为 PDF 前端提示"暂不支持"或加剥 block 重试。`tsc` 通过。

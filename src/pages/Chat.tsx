@@ -20,6 +20,7 @@ type Message = {
   thinking?: string
   marked?: string
   image?: string   // data URL（已压缩的 jpeg），发图用
+  file?: { name: string }   // 发过的文件（只存名字进历史；内容在内存 registry，发送那几轮他能读）
 }
 
 // 手机上 Enter 换行、只用 ↑ 按钮发送；桌面保持 Enter 发送、Shift+Enter 换行
@@ -254,7 +255,70 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [pendingImage, setPendingImage] = useState<string | null>(null)
+  const [pendingFile, setPendingFile] = useState<{ name: string; data?: string; text?: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  // 文件内容只留在内存：msgId → {data(pdf base64) | text}，刷新即失，历史里只剩文件名
+  const fileRegistry = useRef<Map<number, { data?: string; text?: string }>>(new Map())
+
+  async function pickFile(f: File) {
+    if (f.type.startsWith('image/')) {
+      try { setPendingImage(await compressImage(f)) } catch { /* noop */ }
+      return
+    }
+    if (f.type === 'application/pdf') {
+      if (f.size > 8_000_000) { window.alert('PDF 太大了，8MB 以内'); return }
+      const data = await new Promise<string>((res, rej) => {
+        const r = new FileReader()
+        r.onload = () => res((r.result as string).split(',')[1] || '')
+        r.onerror = rej
+        r.readAsDataURL(f)
+      })
+      setPendingFile({ name: f.name, data })
+      return
+    }
+    // 其余一律按纯文本读；读出来是二进制乱码（docx/xlsx等）就拦下
+    const text = await f.text()
+    if (!text.trim() || text.includes(' ')) {
+      window.alert('这种格式他读不了——PDF 或纯文本（txt/md/代码/csv）可以')
+      return
+    }
+    setPendingFile({ name: f.name, text: text.slice(0, 30000) })
+  }
+  // voice call（对讲机）：按住录音 → /stt 转文字 → 正常聊天流程 → 回复自动播他的声音
+  const [showCall, setShowCall] = useState(false)
+  const [callStatus, setCallStatus] = useState<'idle' | 'rec' | 'stt'>('idle')
+  const recRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+
+  async function callHoldStart() {
+    if (callStatus !== 'idle' || loading) return
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mime = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/webm'
+      const rec = new MediaRecorder(stream, { mimeType: mime })
+      chunksRef.current = []
+      rec.ondataavailable = e => { if (e.data.size) chunksRef.current.push(e.data) }
+      rec.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop())
+        const blob = new Blob(chunksRef.current, { type: mime })
+        if (blob.size < 2000) { setCallStatus('idle'); return }  // 手滑碰了一下，忽略
+        setCallStatus('stt')
+        try {
+          const r = await fetch(`${BRIDGE}/stt`, { method: 'POST', headers: { 'Content-Type': mime }, body: blob })
+          const d = await r.json()
+          const heard = (d?.text || '').trim()
+          setCallStatus('idle')
+          if (heard) await send(heard, true)
+        } catch { setCallStatus('idle') }
+      }
+      rec.start()
+      recRef.current = rec
+      setCallStatus('rec')
+    } catch { setCallStatus('idle') }  // 没给麦克风权限
+  }
+  function callHoldEnd() {
+    if (recRef.current?.state === 'recording') recRef.current.stop()
+  }
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
@@ -368,15 +432,20 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
   const hiddenCount = searchQuery.trim() ? 0 : Math.max(0, filtered.length - visibleCount)
   const displayMessages = hiddenCount > 0 ? filtered.slice(hiddenCount) : filtered
 
-  async function send() {
-    const text = input.trim()
-    if ((!text && !pendingImage) || loading) return
+  // overrideText：语音通话转出来的文字走这里；speakReply：回复生成后自动用他的声音读出来
+  async function send(overrideText?: string, speakReply = false) {
+    const typed = overrideText === undefined
+    const text = (overrideText ?? input).trim()
+    if ((!text && !(typed && (pendingImage || pendingFile))) || loading) return
     const userMsg: Message = { id: Date.now(), role: 'user', text }
-    if (pendingImage) userMsg.image = pendingImage
+    if (typed && pendingImage) userMsg.image = pendingImage
+    if (typed && pendingFile) {
+      userMsg.file = { name: pendingFile.name }
+      fileRegistry.current.set(userMsg.id, { data: pendingFile.data, text: pendingFile.text })
+    }
     const newMessages = [...messages, userMsg]
     setMessages(newMessages)
-    setInput('')
-    setPendingImage(null)
+    if (typed) { setInput(''); setPendingImage(null); setPendingFile(null) }
     setLoading(true)
     msgCountRef.current += 1
 
@@ -388,6 +457,7 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
     try {
       const reply = await generateReply(newMessages, currentMemory)
       setMessages(p => { const updated = [...p, reply]; saveRemoteHistory(updated); return updated })
+      if (speakReply) speak(reply)
       if (msgCountRef.current % 5 === 0) hold(`Eve说：${text}\nClaude回：${reply.text}`, 'summertimes,对话')
     } catch {
       setMessages(p => [...p, { id: Date.now(), role: 'assistant', text: '网络错误，再试一次。' }])
@@ -452,23 +522,29 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
       const p = (n: number) => n.toString().padStart(2, '0')
       return `[${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}] `
     }
-    // 带图消息：最近 6 条内的图原样发给模型（vision），更早的只留 [图片] 占位省 token
+    // 带图/带文件消息：最近 6 条内原样给模型（vision / document / 内联文本），
+    // 更早的降级成 [图片] / [文件: 名字] 占位省 token
     const win = history.slice(-30)
     const convo: { role: string; content: unknown }[] = win.map((m, i) => {
-      const textPart = m.role === 'user' ? (stamp(m.id) + m.text).trim() : m.text
-      if (m.image && win.length - i <= 6) {
-        const match = m.image.match(/^data:(image\/\w+);base64,(.+)$/)
-        if (match) {
-          return {
-            role: m.role,
-            content: [
-              { type: 'image', source: { type: 'base64', media_type: match[1], data: match[2] } },
-              ...(textPart ? [{ type: 'text', text: textPart }] : []),
-            ] as unknown,
-          }
-        }
+      const recent = win.length - i <= 6
+      let textPart = m.role === 'user' ? (stamp(m.id) + m.text).trim() : m.text
+      const blocks: unknown[] = []
+      if (m.image) {
+        const match = recent ? m.image.match(/^data:(image\/\w+);base64,(.+)$/) : null
+        if (match) blocks.push({ type: 'image', source: { type: 'base64', media_type: match[1], data: match[2] } })
+        else textPart = `${textPart}\n[图片]`.trim()
       }
-      return { role: m.role, content: (m.image ? `${textPart}\n[图片]`.trim() : textPart) as unknown }
+      if (m.file) {
+        const fd = recent ? fileRegistry.current.get(m.id) : undefined
+        if (fd?.data) blocks.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: fd.data } })
+        else if (fd?.text) textPart = `【文件 ${m.file.name} 的内容】\n${fd.text}\n【文件结束】\n\n${textPart}`.trim()
+        else textPart = `${textPart}\n[文件: ${m.file.name}]`.trim()
+      }
+      if (blocks.length) {
+        if (textPart) blocks.push({ type: 'text', text: textPart })
+        return { role: m.role, content: blocks as unknown }
+      }
+      return { role: m.role, content: textPart as unknown }
     })
     while (convo.length && convo[0].role !== 'user') convo.shift()
 
@@ -640,7 +716,10 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'calc(11px + env(safe-area-inset-top, 0px)) 24px 11px' }}>
             <button onClick={() => onNavigate('home')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 24, color: 'rgba(var(--ink),0.7)', lineHeight: 1 }}>‹</button>
             <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 15, letterSpacing: 4, color: 'rgba(var(--ink),0.88)' }}>Summertimes</span>
-            <button onClick={() => { setShowSearch(v => !v); setSearchQuery('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: showSearch ? 'rgba(var(--ink),0.9)' : 'rgba(var(--ink),0.45)' }}>⌕</button>
+            <div style={{ display: 'flex', gap: 18 }}>
+              <button onClick={() => setShowCall(true)} title="voice call" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 17, color: 'rgba(var(--ink),0.45)' }}>✆</button>
+              <button onClick={() => { setShowSearch(v => !v); setSearchQuery('') }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: showSearch ? 'rgba(var(--ink),0.9)' : 'rgba(var(--ink),0.45)' }}>⌕</button>
+            </div>
           </div>
           <AnimatePresence>
             {showSearch && (
@@ -717,6 +796,11 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
                     {m.image && <img src={m.image} alt="" style={{ maxWidth: '100%', maxHeight: 260, borderRadius: 14, border: '0.5px solid rgba(var(--ink),0.15)' }} />}
+                    {m.file && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(var(--ink),0.08)', border: '0.5px solid rgba(var(--ink),0.15)', borderRadius: 10, padding: '6px 12px', fontSize: 12.5, color: 'rgba(var(--ink),0.65)', fontFamily: 'monospace' }}>
+                        ▤ {m.file.name}
+                      </span>
+                    )}
                     {m.text && <p style={{ fontSize: 15, lineHeight: 1.75, color: 'rgba(var(--ink),0.78)', overflowWrap: 'anywhere', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{m.text}</p>}
                   </div>
                 )}
@@ -734,6 +818,42 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
           )}
         </div>
 
+        {/* voice call 全屏层 */}
+        <AnimatePresence>
+          {showCall && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              style={{ position: 'fixed', inset: 0, zIndex: 30, background: 'rgba(var(--veil),0.9)',
+                backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 30, padding: 32 }}>
+              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 12, letterSpacing: 4, fontStyle: 'italic', color: 'rgba(var(--ink),0.5)' }}>
+                {callStatus === 'rec' ? '在听…' : callStatus === 'stt' ? '听清了…' : loading ? '他在想…' : playingId !== null ? '他在说…' : 'voice'}
+              </span>
+              {(() => { const last = messages[messages.length - 1]
+                return last?.role === 'assistant' && last.id !== 0 ? (
+                  <p style={{ maxWidth: '82%', textAlign: 'center', fontSize: 15, lineHeight: 1.8, color: 'rgba(var(--ink),0.75)', fontFamily: "'Cormorant Garamond', serif" }}>{last.text}</p>
+                ) : null })()}
+              <button
+                onTouchStart={e => { e.preventDefault(); callHoldStart() }}
+                onTouchEnd={e => { e.preventDefault(); callHoldEnd() }}
+                onMouseDown={callHoldStart} onMouseUp={callHoldEnd} onMouseLeave={callHoldEnd}
+                onContextMenu={e => e.preventDefault()}
+                style={{ width: 150, height: 150, borderRadius: '50%', cursor: 'pointer',
+                  border: '1px solid rgba(var(--ink),0.3)',
+                  background: callStatus === 'rec' ? 'rgba(200,225,215,0.3)' : 'rgba(var(--ink),0.08)',
+                  color: 'rgba(var(--ink),0.8)', fontFamily: "'Cormorant Garamond', serif", fontSize: 14, letterSpacing: 3,
+                  touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none',
+                  transition: 'background 0.2s, transform 0.2s', transform: callStatus === 'rec' ? 'scale(1.08)' : 'none' }}>
+                {callStatus === 'rec' ? '松开 发送' : '按住 说话'}
+              </button>
+              <button onClick={() => { callHoldEnd(); setShowCall(false) }}
+                style={{ background: 'none', border: '0.5px solid rgba(var(--ink),0.25)', borderRadius: 20, padding: '7px 26px',
+                  cursor: 'pointer', fontFamily: "'Cormorant Garamond', serif", fontSize: 13, letterSpacing: 3, color: 'rgba(var(--ink),0.6)' }}>
+                挂断
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {showJump && !showSearch && (
           <button className="glass"
             onClick={() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })}
@@ -747,18 +867,23 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
 
         {!showSearch && (
           <div className="glass" style={{ display: 'flex', flexDirection: 'column', gap: 0, padding: '12px 16px calc(20px + env(safe-area-inset-bottom, 0px))', borderRadius: 0, borderBottom: 'none', borderLeft: 'none', borderRight: 'none' }}>
-            {pendingImage && (
+            {(pendingImage || pendingFile) && (
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 10 }}>
-                <img src={pendingImage} alt="" style={{ height: 64, borderRadius: 10, border: '0.5px solid rgba(var(--ink),0.2)' }} />
-                <button onClick={() => setPendingImage(null)}
+                {pendingImage && <img src={pendingImage} alt="" style={{ height: 64, borderRadius: 10, border: '0.5px solid rgba(var(--ink),0.2)' }} />}
+                {pendingFile && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(var(--ink),0.08)', border: '0.5px solid rgba(var(--ink),0.15)', borderRadius: 10, padding: '7px 12px', fontSize: 12.5, color: 'rgba(var(--ink),0.65)', fontFamily: 'monospace' }}>
+                    ▤ {pendingFile.name}
+                  </span>
+                )}
+                <button onClick={() => { setPendingImage(null); setPendingFile(null) }}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, color: 'rgba(var(--ink),0.5)', padding: 2 }}>×</button>
               </div>
             )}
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10 }}>
-              <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
+              <input ref={fileRef} type="file" accept="image/*,application/pdf,text/*,.md,.csv,.json,.log,.py,.js,.ts,.tsx,.html,.css,.sh,.yml,.yaml,.xml" style={{ display: 'none' }}
                 onChange={async e => {
                   const f = e.target.files?.[0]
-                  if (f) { try { setPendingImage(await compressImage(f)) } catch { /* noop */ } }
+                  if (f) { try { await pickFile(f) } catch { /* noop */ } }
                   e.target.value = ''
                 }} />
               <button onClick={() => fileRef.current?.click()} disabled={loading} title="发图"
@@ -768,7 +893,7 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
                 style={{ flex: 1, background: 'rgba(var(--ink),0.1)', border: '0.5px solid rgba(var(--ink),0.18)', borderRadius: 22, padding: '9px 16px', fontFamily: "'Cormorant Garamond', serif", fontSize: 16, color: 'rgba(var(--ink),0.88)', outline: 'none', resize: 'none', maxHeight: 120, overflow: 'auto' }}
                 onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 120) + 'px' }}
               />
-              <button onClick={send} disabled={loading}
+              <button onClick={() => send()} disabled={loading}
                 style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(var(--ink),0.18)', border: '0.5px solid rgba(var(--ink),0.25)', cursor: 'pointer', fontSize: 16, color: 'rgba(var(--ink),0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: loading ? 0.4 : 1 }}>↑</button>
             </div>
             {(sessionTokens.input + sessionTokens.output) > 0 && (
