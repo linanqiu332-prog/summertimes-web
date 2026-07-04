@@ -11,6 +11,8 @@ export const SYNC_KEYS = [
   'summertimes_countdowns',
   'summertimes_diary',
   'summertimes_reminders',
+  'summertimes_persona',      // wake.py 自主唤醒时要在 VPS 上读人设
+  'summertimes_persona_eve',
 ]
 
 // 从 VPS 拉全部数据，写入 localStorage，再把本地数据推回 VPS
