@@ -44,8 +44,9 @@ def main() -> None:
     except Exception:
         pass
 
-    # 防刷屏硬规则：上一条已经是他主动说的、Eve 还没回，12 小时内不再开口
-    if history and history[-1].get("role") == "assistant":
+    # 防刷屏硬规则：上一条是他【主动】说的（wake 标记）、Eve 还没回，12 小时内不再开口。
+    # 正常对话以他的回复收尾不算——那是回话，不是主动留言。
+    if history and history[-1].get("wake"):
         last_id = history[-1].get("id", 0)
         if last_id > 1e12 and (now.timestamp() * 1000 - last_id) < 12 * 3600e3:
             print("cooldown: 上条主动消息未回，沉默"); return
@@ -107,7 +108,7 @@ def main() -> None:
     if not text:
         print("chose silence"); return
 
-    history.append({"id": int(now.timestamp() * 1000), "role": "assistant", "text": text})
+    history.append({"id": int(now.timestamp() * 1000), "role": "assistant", "text": text, "wake": True})
     try:
         httpx.post(f"{BRIDGE}/history", timeout=10, json=history)
     except Exception as e:
