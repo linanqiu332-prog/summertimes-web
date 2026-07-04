@@ -31,6 +31,53 @@ def env(key: str) -> str:
     return ""
 
 
+def observations(history: list, store: dict, now: datetime.datetime) -> list:
+    """从她留下的痕迹里读状态——她要求的：状态不好时不用她说，他要能自己看出来。"""
+    obs = []
+    now_ms = now.timestamp() * 1000
+    day_ms = 86400e3
+    user_msgs = [m for m in history if m.get("role") == "user" and m.get("id", 0) > 1e12]
+
+    # ① 凌晨活跃 = 没睡好
+    late = [m for m in user_msgs
+            if m["id"] > now_ms - 3 * day_ms
+            and 1 <= datetime.datetime.fromtimestamp(m["id"] / 1000).hour < 6]
+    if late:
+        obs.append(f"最近三天，她有 {len(late)} 条消息发在凌晨1点到6点之间——她没在睡觉。")
+
+    # ② 反常沉默：平时几乎天天来，突然消失超过30小时
+    if user_msgs:
+        last = max(m["id"] for m in user_msgs)
+        gap_h = (now_ms - last) / 3600e3
+        active_days = {datetime.datetime.fromtimestamp(m["id"] / 1000).date()
+                       for m in user_msgs if m["id"] > now_ms - 14 * day_ms}
+        if len(active_days) >= 7 and gap_h > 30:
+            obs.append(f"过去两周她几乎每天都来，这次已经 {gap_h:.0f} 小时没出现了。")
+
+    # ③ 待办过期堆积
+    try:
+        rems = store.get("summertimes_reminders") or []
+        overdue = [r for r in rems if not r.get("done")
+                   and str(r.get("date", "9999")) < now.strftime("%Y-%m-%d")]
+        if len(overdue) >= 3:
+            obs.append(f"她的待办里有 {len(overdue)} 条过了日期还没勾——她平时不这样。")
+    except Exception:
+        pass
+
+    # ④ 她最近写的日记（只看她写的，不看他自己写的）
+    try:
+        diary = store.get("summertimes_diary") or []
+        eve_entries = [d for d in diary if isinstance(d, dict) and d.get("author") == "eve"]
+        if eve_entries:
+            latest = max(eve_entries, key=lambda d: d.get("id", 0))
+            if latest.get("id", 0) > now_ms - 3 * day_ms and latest.get("text"):
+                obs.append(f"她最近写的日记：{latest['text'][:400]}")
+    except Exception:
+        pass
+
+    return obs
+
+
 def main() -> None:
     api_key = env("VITE_API_KEY")
     api_url = re.sub(r"/chat/completions/?$", "", env("VITE_API_URL")) + "/messages"
@@ -52,6 +99,7 @@ def main() -> None:
             print("cooldown: 上条主动消息未回，沉默"); return
 
     persona = PERSONA_DEFAULT
+    store: dict = {}
     try:
         store = httpx.get(f"{BRIDGE}/store", timeout=10).json()
         persona = (store.get("summertimes_persona") or "").strip() or PERSONA_DEFAULT
@@ -78,6 +126,14 @@ def main() -> None:
 不想说：只输出 [[SILENT]]。"""
     if memory:
         system += f"\n\n关于Eve的记忆：\n{memory}"
+
+    obs = observations(history, store, now)
+    if obs:
+        system += ("\n\n你对她最近状态的观察（来自她在app里留下的痕迹。这个能力是她自己要求你有的——"
+                   "状态不好的时候，不用她说，不用她来找你）：\n"
+                   + "\n".join(f"- {o}" for o in obs)
+                   + "\n如果观察里有让你担心的，这就是开口的理由。"
+                   "语气别像监控报告，也别列举你看到了什么——就像你自己注意到了，自然地关心。")
 
     msgs = [{"role": m["role"], "content": m["text"]} for m in history[-12:] if m.get("text")]
     while msgs and msgs[0]["role"] != "user":
