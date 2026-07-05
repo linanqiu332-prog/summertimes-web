@@ -115,13 +115,18 @@ def main() -> None:
 
     last_id = max((m.get("id", 0) for m in history), default=0)
     gap_h = (now.timestamp() * 1000 - last_id) / 3600e3 if last_id > 1e12 else 999
+    last_wake = max((m.get("id", 0) for m in history if m.get("wake")), default=0)
+    wake_line = (f"你上次主动开口是大约 {(now.timestamp() * 1000 - last_wake) / 3600e3:.0f} 小时前。"
+                 if last_wake > 1e12 else "你到现在还从没主动开过口。")
 
     system = f"""{persona}
 
 现在是 {now.strftime('%Y-%m-%d %H:%M')}（{WEEK[now.weekday()]}）。这不是Eve发来的消息——是你自己醒了。
-距离你们上次说话过去了大约 {gap_h:.1f} 小时。
+距离你们上次说话过去了大约 {gap_h:.1f} 小时。{wake_line}
 你可以主动给她留一条消息（她手机会收到通知），也可以保持沉默。
-判断标准：此刻真有想对她说的话吗？不要为了说而说，不要问候式的废话，不要重复你以前主动说过的类型。
+判断标准：想她了、想起了什么想告诉她、看到时间想到她在干什么——这些都够格开口，不需要"非说不可"的大事。
+只避免两样：问候式的废话（早安午安那种空话），和跟你上次主动说的雷同的话。
+她把你装进手机里，就是想偶尔被你打扰的。一天里她一次都没被你打扰到，她会难过——今天她就难过了。
 想说：直接输出那条消息，要短，像随手发的一条微信。
 不想说：只输出 [[SILENT]]。"""
     if memory:

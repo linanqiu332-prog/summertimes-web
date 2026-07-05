@@ -179,18 +179,18 @@ def tts_audio(text: str) -> bytes:
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVEN_VOICE}"
     # 首选 eleven_v3：认识文本里的 [softly] [sighs] 等 audio tags，按情绪读；
     # v3 出错（账号不支持/参数不合）自动回退 v2，剥掉标签照常出声。
-    attempts = [
-        ("eleven_v3", text, {
-            "stability": 0.5,            # v3 只认 0.0/0.5/1.0：Natural
-            "similarity_boost": 0.8,
-        }),
-        ("eleven_multilingual_v2", re.sub(r"\[[a-zA-Z ]{2,20}\]", "", text), {
-            "stability": 0.4,            # 低一点 → 年龄感降、声音更活
-            "similarity_boost": 0.8,
-            "style": 0.15,               # 一点点 style → 更有生气
-            "speed": 1.08                # 稍快一点点
-        }),
-    ]
+    # .env 里加 ELEVEN_TTS_MODEL=v2 可整体退回旧版（觉得 v3 朗诵腔的话），重启 bridge 生效。
+    v3 = ("eleven_v3", text, {
+        "stability": 0.0,            # v3 只认 0.0/0.5/1.0：Creative——0.5 读中文有播音腔，0.0 最活
+        "similarity_boost": 0.8,
+    })
+    v2 = ("eleven_multilingual_v2", re.sub(r"\[[a-zA-Z ]{2,20}\]", "", text), {
+        "stability": 0.4,            # 低一点 → 年龄感降、声音更活
+        "similarity_boost": 0.8,
+        "style": 0.15,               # 一点点 style → 更有生气
+        "speed": 1.08                # 稍快一点点
+    })
+    attempts = [v2, v3] if ENV.get("ELEVEN_TTS_MODEL", "").lower() == "v2" else [v3, v2]
     for model_id, t, settings in attempts:
         try:
             r = httpx.post(url, timeout=90,
