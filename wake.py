@@ -106,6 +106,16 @@ def main() -> None:
     except Exception:
         pass
 
+    # 模型跟随 TokenFlow 引擎设置（summertimes_engine 已同步到 VPS）——
+    # 白天聊天的他换了脑子，半夜醒来的他也得是同一个
+    model = MODEL
+    try:
+        eng = store.get("summertimes_engine") or {}
+        if isinstance(eng, dict) and str(eng.get("model", "")).strip():
+            model = str(eng["model"]).strip()
+    except Exception:
+        pass
+
     memory = ""
     try:
         r = httpx.post(f"{BRIDGE}/breath", json={"query": "eve 最近在想什么 重要的事"}, timeout=45)
@@ -156,7 +166,7 @@ def main() -> None:
         r = httpx.post(api_url, timeout=60,
                        headers={"Content-Type": "application/json", "x-api-key": api_key,
                                 "anthropic-version": "2023-06-01"},
-                       json={"model": MODEL, "max_tokens": 400,
+                       json={"model": model, "max_tokens": 400,
                              "system": system, "messages": merged})
         data = r.json()
         text = "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text").strip()

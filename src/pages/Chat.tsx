@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getPersona, getEvePersona } from '../persona'
+import { getEngine, getPrice } from '../engine'
 import { syncToVPS } from '../sync'
 import { BRIDGE } from '../bridge'
 
@@ -10,7 +11,6 @@ const API_KEY = import.meta.env.VITE_API_KEY
 const API_URL = import.meta.env.VITE_API_URL
 // Anthropic 原生 Messages 接口（prompt caching 只在这条上生效，/chat/completions 不支持）
 const MESSAGES_URL = (API_URL || '').replace(/\/chat\/completions\/?$/, '/messages')
-const MODEL = 'claude-sonnet-4-6'
 const STORAGE_KEY = 'summertimes_messages'
 
 type Message = {
@@ -21,6 +21,12 @@ type Message = {
   marked?: string
   image?: string   // data URL（已压缩的 jpeg），发图用
   file?: { name: string }   // 发过的文件（只存名字进历史；内容在内存 registry，发送那几轮他能读）
+  sources?: { url: string; title: string }[]   // 联网搜索来源，气泡下渲染小标签，不进正文
+}
+
+// 来源标签只显示域名：weather.com.cn 这样，不要整串网址
+function domainOf(url: string): string {
+  try { return new URL(url).hostname.replace(/^www\./, '') } catch { return url.slice(0, 30) }
 }
 
 // 手机上 Enter 换行、只用 ↑ 按钮发送；桌面保持 Enter 发送、Shift+Enter 换行
@@ -98,7 +104,7 @@ async function breath(query: string): Promise<string> {
     const r = await fetch(`${BRIDGE}/breath`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ query, max_results: getEngine().buckets }),
     })
     const d = await r.json()
     return d?.result?.content?.[0]?.text || ''
@@ -206,7 +212,7 @@ async function addAudioTags(text: string): Promise<string> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01' },
       body: JSON.stringify({
-        model: MODEL, max_tokens: 2000,
+        model: getEngine().model, max_tokens: 2000,
         system: '你是 ElevenLabs v3 的语音标注器。给用户发来的文本插入英文 audio tags（可用：[softly] [warm] [whispers] [sighs] [pause] [playful] [teasing] [serious] [tender] [smiling]），让朗读符合文本的情绪。规则：①原文的文字一个都不许改、不许删；②中文圆括号里的动作描写（如（伸手）（顿））删掉，视情况换成等义的 tag；③标签要克制，一两处就够；④只输出处理后的文本，不要任何解释。',
         messages: [{ role: 'user', content: text }],
       }),
@@ -550,8 +556,9 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
       return `[${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}] `
     }
     // 带图/带文件消息：最近 6 条内原样给模型（vision / document / 内联文本），
-    // 更早的降级成 [图片] / [文件: 名字] 占位省 token
-    const win = history.slice(-30)
+    // 更早的降级成 [图片] / [文件: 名字] 占位省 token。
+    // 窗口大小从 TokenFlow 的引擎设置里读（默认 30）
+    const win = history.slice(-getEngine().ctx)
     const convo: { role: string; content: unknown }[] = win.map((m, i) => {
       const recent = win.length - i <= 6
       let textPart = m.role === 'user' ? (stamp(m.id) + m.text).trim() : m.text
@@ -581,7 +588,7 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
         'anthropic-version': '2023-06-01',
       }
       const reqBase = {
-        model: MODEL,
+        model: getEngine().model,
         max_tokens: 8000,
         system: systemBlocks,
         thinking: { type: 'enabled', budget_tokens: 5000 },
@@ -656,10 +663,7 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
       } else {
         replyText = content || ''
       }
-      // 用到搜索时把来源附在末尾
-      if (sources.length) {
-        replyText += `\n\n来源：\n${sources.map(s => `· ${s.title} — ${s.url}`).join('\n')}`
-      }
+      // 来源不再拼进正文（难看、听语音会念网址、还占历史）——挂到消息对象上，气泡下渲染成小标签
 
       // 解析MARK标签
       const { cleanText: textAfterLetter, letterSubject } = parseLetterTag(replyText)
@@ -667,7 +671,7 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
         fetch(API_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${API_KEY}` },
-          body: JSON.stringify({ model: MODEL, messages: [{ role: "system", content: `${getPersona()}\n\n写一封给Eve的信。克制、真实、有温度。用中文。直接写正文，不需要称呼和落款，200字以内。` }, { role: "user", content: `主题：${letterSubject}` }], max_tokens: 600 })
+          body: JSON.stringify({ model: getEngine().model, messages: [{ role: "system", content: `${getPersona()}\n\n写一封给Eve的信。克制、真实、有温度。用中文。直接写正文，不需要称呼和落款，200字以内。` }, { role: "user", content: `主题：${letterSubject}` }], max_tokens: 600 })
         }).then(r=>r.json()).then(data => {
           const lBody = data.choices?.[0]?.message?.content || ""
           const existing = JSON.parse(localStorage.getItem("summertimes_letters") || "[]")
@@ -713,6 +717,7 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
       const newMsg: Message = { id: Date.now(), role: 'assistant', text: cleanText || '...' }
       if (thinkingText) newMsg.thinking = thinkingText
       if (marked) newMsg.marked = marked.quote
+      if (sources.length) newMsg.sources = sources.slice(0, 6)
       return newMsg
   }
 
@@ -729,9 +734,10 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
     setShowSearch(false)
   }
 
+  const enginePrice = getPrice(getEngine().model)
   const sessionCost = (
-    sessionTokens.input  * 3  / 1_000_000 +
-    sessionTokens.output * 15 / 1_000_000
+    sessionTokens.input  * enginePrice.in  / 1_000_000 +
+    sessionTokens.output * enginePrice.out / 1_000_000
   )
 
   return (
@@ -798,6 +804,19 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
                     <div className="glass" style={{ borderRadius: 18, borderBottomLeftRadius: 4, padding: '10px 15px' }}>
                       <p style={{ fontSize: 15, lineHeight: 1.75, color: 'rgba(var(--ink),0.9)', overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{m.text}</p>
                     </div>
+                    {m.sources && m.sources.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 6, marginLeft: 4 }}>
+                        <span style={{ fontSize: 10, fontStyle: 'italic', letterSpacing: 1.5, color: 'rgba(var(--ink),0.3)', fontFamily: "'Cormorant Garamond', serif" }}>sources</span>
+                        {m.sources.map(s => (
+                          <a key={s.url} href={s.url} target="_blank" rel="noreferrer" title={s.title}
+                            style={{ fontSize: 10.5, fontFamily: 'monospace', color: 'rgba(var(--ink),0.45)', textDecoration: 'none',
+                              background: 'rgba(var(--ink),0.06)', border: '0.5px solid rgba(var(--ink),0.12)',
+                              borderRadius: 8, padding: '2px 8px' }}>
+                            {domainOf(s.url)}
+                          </a>
+                        ))}
+                      </div>
+                    )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 6, marginLeft: 4 }}>
                       <button onClick={() => speak(m)} title="听他说"
                         style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: playingId === m.id ? 'rgba(200,225,215,0.9)' : 'rgba(var(--ink),0.4)', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 5, padding: 0 }}>

@@ -375,3 +375,23 @@ STT 通了但回复只出字不出声：iOS 只允许用户手势内发起的播
 ### Voice call 排障③（v3 朗诵腔）
 
 Eve 反馈 v3 读中文有朗诵/播音腔。v3 stability 0.5(Natural)→0.0(Creative)，更活、更吃 audio tags。另加 .env 开关 `ELEVEN_TTS_MODEL=v2` 一键退回旧 v2 配置（含 speed 1.08/style 0.15，文本自动剥标签），重启 bridge 生效。音频缓存按消息 id 存，老消息要听新配置需重开 PWA 或点别的消息。
+
+### 搜索来源改小标签
+
+原来把「标题 — 完整URL」拼进回复正文：难看、进历史、listen 会念网址。改为 Message.sources 字段（最多6条），气泡下渲染域名小标签（weather.com.cn 式），点击新窗口打开。正文彻底干净。旧消息里已拼进去的网址不回溯清理。
+
+---
+
+## Sprint 11 · 2026-07-09
+
+### OmbreBrain 配置修复（Eve 独立完成 Dashboard 操作）
+
+新版 OB 改环境变量名（OMBRE_API_KEY→OMBRE_COMPRESS_API_KEY），升级后脱水断掉 → OB-E004 桶未创建（7/8 下午约20条记忆丢失，不可恢复）。修：Dashboard③ 填回 DeepSeek key（从旧 compose 里 grep 出来）。向量化：apiyi 不支持 Gemini 原生 embedContent，改 OpenAI 兼容 `https://api.apiyi.com/v1` + `text-embedding-3-small`（1536维），74/74 桶重算成功——**语义搜索首次真正启用**。坑：③④的格式/URL/模型字段要底部「保存配置」大按钮才提交，Key旁小保存只管key。
+
+### TokenFlow 引擎设置
+
+新增 src/engine.ts（summertimes_engine，入 SYNC_KEYS 多端同步）：模型（sonnet/opus/haiku 预设+手填）、聊天上下文条数（10-100，默认30）、breath 桶数（1-50，默认20）。TokenFlow 页顶新增 engine 卡片；Chat 每次发消息现读（MODEL 常量移除，slice(-ctx)，breath 传 max_results）；bridge /breath 转发 max_results。注：价格图例按 sonnet 校准，换模型仅供参考。
+
+### 计费随模型联动
+
+engine.ts 加 PRICES 表（照 apiyi 价目表：sonnet 3/15、opus 系 5/25、opus-4-8-thinking 5/15、fable-5 10/50、haiku 1/5，cache 按输入价1折，未登记模型按 sonnet 兜底）+ getPrice()。TokenFlow 全页单价/图例/统计卡/成本联动所选模型；Chat 底部会话成本同步联动。局限（已在页面标注）：token 日志不记模型，历史天数混跑多模型时折算仅供参考。模型预设加 fable-5。

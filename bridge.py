@@ -272,7 +272,10 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if self.path == "/breath":
-            result = asyncio.run(call_tool("breath", {"query": body.get("query", "")}))
+            breath_args = {"query": body.get("query", "")}
+            if body.get("max_results"):
+                breath_args["max_results"] = int(body["max_results"])
+            result = asyncio.run(call_tool("breath", breath_args))
         elif self.path == "/hold":
             result = asyncio.run(call_tool("hold", {
                 "content": body.get("content", ""),
