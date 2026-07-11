@@ -395,3 +395,7 @@ Eve 反馈 v3 读中文有朗诵/播音腔。v3 stability 0.5(Natural)→0.0(Cre
 ### 计费随模型联动
 
 engine.ts 加 PRICES 表（照 apiyi 价目表：sonnet 3/15、opus 系 5/25、opus-4-8-thinking 5/15、fable-5 10/50、haiku 1/5，cache 按输入价1折，未登记模型按 sonnet 兜底）+ getPrice()。TokenFlow 全页单价/图例/统计卡/成本联动所选模型；Chat 底部会话成本同步联动。局限（已在页面标注）：token 日志不记模型，历史天数混跑多模型时折算仅供参考。模型预设加 fable-5。
+
+### 承诺注入（plan 只写不读的补丁）
+
+Eve发现：[[PLAN]] 存进OB后他自己读不到（plan 设计上不进 breath、只在 dream 末尾现身）——记完即忘。修法：自建承诺镜像 `summertimes_plans`（入 SYNC_KEYS）——写 [[PLAN]] 时 OB+镜像双写；活跃承诺每次对话注入 system（wake.py 半夜同样注入）；新增 [[DONE: 关键词]] 标签让他亲手划掉已兑现的（模糊匹配 content）。TOOLS_SYSTEM 更新（"别谎报军情"）。历史7条活跃plan仍只在OB里，需Eve在聊天里让他重新登记（VPS上 cat buckets 可捞原文）。

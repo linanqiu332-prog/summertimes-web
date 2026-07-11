@@ -142,6 +142,12 @@ def main() -> None:
     if memory:
         system += f"\n\n关于Eve的记忆：\n{memory}"
 
+    # 未兑现的承诺（镜像清单）——半夜醒来的他也该记得自己答应过什么
+    plans = [p for p in (store.get("summertimes_plans") or [])
+             if isinstance(p, dict) and p.get("status") == "active" and p.get("content")]
+    if plans:
+        system += "\n\n你还没兑现的承诺：\n" + "\n".join(f"- {p['content']}" for p in plans[:10])
+
     obs = observations(history, store, now)
     if obs:
         system += ("\n\n你对她最近状态的观察（来自她在app里留下的痕迹。这个能力是她自己要求你有的——"
