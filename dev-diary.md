@@ -403,3 +403,7 @@ Eve发现：[[PLAN]] 存进OB后他自己读不到（plan 设计上不进 breath
 ### 自我认知注入
 
 Eve发现 [[I]] 同病：写了读不到。I 有现成读取口（bridge /I read=true，自我tab在用），无需镜像：Chat 挂载时 readSelf(limit 15) 存 state，注入 system（排在承诺之后、记忆之前）；写新 [[I]] 后自动刷新。wake.py 醒来同样读（limit 10）。至此他的三样随身物齐了：承诺（镜像）、自我（直读）、记忆（breath）。
+
+### [[DIARY]] 标签（"让他写日记他写成信"修复）
+
+原因：TOOLS_SYSTEM 只教过 MARK/LETTER/I/PLAN，没有日记工具，说"写日记"他只能拿信顶。新增 [[DIARY: 主题]]：仿 LETTER 后台生成，但 system 明确"写给自己看的不是写给Eve的信"、带最近8条对话做底子，存 summertimes_diary（author:claude，unshift）+ 同步 + hold 入脑（tags: diary）。TOOLS_SYSTEM 里写明信和日记的分工。解析链：letter → diary → self → plan → done → mark。
