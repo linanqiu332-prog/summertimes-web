@@ -399,3 +399,7 @@ engine.ts 加 PRICES 表（照 apiyi 价目表：sonnet 3/15、opus 系 5/25、o
 ### 承诺注入（plan 只写不读的补丁）
 
 Eve发现：[[PLAN]] 存进OB后他自己读不到（plan 设计上不进 breath、只在 dream 末尾现身）——记完即忘。修法：自建承诺镜像 `summertimes_plans`（入 SYNC_KEYS）——写 [[PLAN]] 时 OB+镜像双写；活跃承诺每次对话注入 system（wake.py 半夜同样注入）；新增 [[DONE: 关键词]] 标签让他亲手划掉已兑现的（模糊匹配 content）。TOOLS_SYSTEM 更新（"别谎报军情"）。历史7条活跃plan仍只在OB里，需Eve在聊天里让他重新登记（VPS上 cat buckets 可捞原文）。
+
+### 自我认知注入
+
+Eve发现 [[I]] 同病：写了读不到。I 有现成读取口（bridge /I read=true，自我tab在用），无需镜像：Chat 挂载时 readSelf(limit 15) 存 state，注入 system（排在承诺之后、记忆之前）；写新 [[I]] 后自动刷新。wake.py 醒来同样读（limit 10）。至此他的三样随身物齐了：承诺（镜像）、自我（直读）、记忆（breath）。

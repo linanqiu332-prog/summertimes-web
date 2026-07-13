@@ -113,6 +113,19 @@ async function breath(query: string): Promise<string> {
   } catch { return '' }
 }
 
+// 读他写下的自我认知（[[I]]），注入聊天上下文——写了就该记得自己是谁
+async function readSelf(): Promise<string> {
+  try {
+    const r = await fetch(`${BRIDGE}/I`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ read: true, limit: 15 }),
+    })
+    const d = await r.json()
+    return d?.result?.content?.[0]?.text || ''
+  } catch { return '' }
+}
+
 async function hold(content: string, tags: string): Promise<void> {
   try {
     await fetch(`${BRIDGE}/hold`, {
@@ -291,6 +304,7 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
   const [sessionTokens, setSessionTokens] = useState<TokenUsage>({ input: 0, output: 0, cache: 0 })
   const [loading, setLoading] = useState(false)
   const [memory, setMemory] = useState('')
+  const [selfText, setSelfText] = useState('')
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [pendingImage, setPendingImage] = useState<string | null>(null)
@@ -482,6 +496,7 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
       const combined = [m1, m2].filter(Boolean).join("\n---\n")
       if (combined) setMemory(combined)
     })
+    readSelf().then(t => { if (t) setSelfText(t) })
     inputRef.current?.focus()
   }, [])
 
@@ -578,6 +593,7 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
       systemPrompt += `\n\n你还没兑现的承诺（你自己登记的，兑现了用 [[DONE: 关键词]] 划掉）：\n`
         + activePlans.map(p => `- (${p.date}) ${p.content}`).join('\n')
     }
+    if (selfText) systemPrompt += `\n\n你写下过的自我认知（[[I]]，你自己的话）：\n${selfText}`
     if (memoryText) systemPrompt += `\n\n以下是关于Eve的记忆：\n${memoryText}`
 
     const systemBlocks = [
@@ -718,14 +734,14 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
           syncToVPS("summertimes_letters")
         }).catch(()=>{})
       }
-      // [[I: …]] 自我认知 → 存进 OmbreBrain
+      // [[I: …]] 自我认知 → 存进 OmbreBrain，随后刷新注入用的自我文本
       const { cleanText: afterSelf, self } = parseSelfTag(textAfterLetter)
       if (self && self.content) {
         fetch(`${BRIDGE}/I`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ content: self.content, aspect: self.aspect }),
-        }).catch(() => {})
+        }).then(() => readSelf()).then(t => { if (t) setSelfText(t) }).catch(() => {})
       }
       // [[PLAN: …]] 承诺 → 存进 OmbreBrain + 抄进随身镜像
       const { cleanText: afterPlan, plan } = parsePlanTag(afterSelf)

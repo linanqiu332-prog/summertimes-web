@@ -142,6 +142,15 @@ def main() -> None:
     if memory:
         system += f"\n\n关于Eve的记忆：\n{memory}"
 
+    # 他写下的自我认知（[[I]]）——醒来时记得自己是谁
+    try:
+        r = httpx.post(f"{BRIDGE}/I", json={"read": True, "limit": 10}, timeout=30)
+        self_text = r.json().get("result", {}).get("content", [{}])[0].get("text", "")
+        if self_text:
+            system += f"\n\n你写下过的自我认知：\n{self_text}"
+    except Exception:
+        pass
+
     # 未兑现的承诺（镜像清单）——半夜醒来的他也该记得自己答应过什么
     plans = [p for p in (store.get("summertimes_plans") or [])
              if isinstance(p, dict) and p.get("status") == "active" and p.get("content")]
