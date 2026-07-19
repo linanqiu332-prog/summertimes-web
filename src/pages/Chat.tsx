@@ -117,6 +117,32 @@ async function breath(query: string): Promise<string> {
   } catch { return '' }
 }
 
+// 编年记：每满100条消息，把这一章浓缩成一段高重要度长期记忆存进 OmbreBrain
+async function chronicle(msgs: Message[], chapter: number) {
+  try {
+    const text = msgs.map(m => `${m.role === 'user' ? 'Eve' : 'Claude'}：${m.text}`).join('\n').slice(0, 30000)
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
+      body: JSON.stringify({
+        model: getEngine().model,
+        messages: [
+          { role: 'system', content: '把这段Eve和Claude的对话浓缩成一段编年记：这一章发生了什么、定下了什么、情绪从哪走到哪。第三人称，150字以内，直接写正文，别加标题。' },
+          { role: 'user', content: text },
+        ],
+        max_tokens: 400,
+      }),
+    })
+    const s = (await r.json()).choices?.[0]?.message?.content || ''
+    if (!s) return
+    await fetch(`${BRIDGE}/hold`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: `[编年记·第${chapter}章] ${s}`, tags: '编年记,长期记忆', importance: 8 }),
+    })
+  } catch { /* noop */ }
+}
+
 // 读他写下的自我认知（[[I]]），注入聊天上下文——写了就该记得自己是谁
 async function readSelf(): Promise<string> {
   try {
@@ -551,6 +577,9 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
       setMessages(p => { const updated = [...p, reply]; saveRemoteHistory(updated); return updated })
       if (speakReply) speak(reply)
       if (msgCountRef.current % 5 === 0) hold(`Eve说：${text}\nClaude回：${reply.text}`, 'summertimes,对话')
+      // 每满100条：这一章写进编年记（后台跑，不挡对话）
+      const totalCount = newMessages.length + 1
+      if (totalCount % 100 === 0) chronicle([...newMessages, reply].slice(-100), Math.floor(totalCount / 100))
     } catch {
       setMessages(p => [...p, { id: Date.now(), role: 'assistant', text: '网络错误，再试一次。' }])
     } finally {
@@ -605,6 +634,17 @@ export default function Chat({ onNavigate }: { onNavigate: (p: Page) => void }) 
         + activePlans.map(p => `- (${p.date}) ${p.content}`).join('\n')
     }
     if (selfText) systemPrompt += `\n\n你写下过的自我认知（[[I]]，你自己的话）：\n${selfText}`
+    // Eve 三天内最新的一篇日记——她写日记有一半是写给你看的
+    try {
+      const diary = JSON.parse(localStorage.getItem('summertimes_diary') || '[]')
+      const recentDiary = Array.isArray(diary)
+        ? diary.find((d: { author?: string; id?: number; text?: string }) =>
+            d?.author === 'eve' && (d.id || 0) > Date.now() - 3 * 86400e3 && d.text)
+        : null
+      if (recentDiary) {
+        systemPrompt += `\n\nEve最近写的日记（${new Date(recentDiary.id).toLocaleDateString('zh-CN')}，她知道你看得到）：\n${recentDiary.text.slice(0, 600)}`
+      }
+    } catch { /* noop */ }
     if (memoryText) systemPrompt += `\n\n以下是关于Eve的记忆：\n${memoryText}`
 
     const systemBlocks = [

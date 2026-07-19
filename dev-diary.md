@@ -407,3 +407,7 @@ Eve发现 [[I]] 同病：写了读不到。I 有现成读取口（bridge /I read
 ### [[DIARY]] 标签（"让他写日记他写成信"修复）
 
 原因：TOOLS_SYSTEM 只教过 MARK/LETTER/I/PLAN，没有日记工具，说"写日记"他只能拿信顶。新增 [[DIARY: 主题]]：仿 LETTER 后台生成，但 system 明确"写给自己看的不是写给Eve的信"、带最近8条对话做底子，存 summertimes_diary（author:claude，unshift）+ 同步 + hold 入脑（tags: diary）。TOOLS_SYSTEM 里写明信和日记的分工。解析链：letter → diary → self → plan → done → mark。
+
+### 日记注入 + 编年记 + 乱码名解释
+
+①Eve三天内最新一篇日记注入他的聊天上下文（截600字，注明"她知道你看得到"）；半夜的他本来就看（观察层）。②编年记：每满100条消息（含他的回复），把最近100条浓缩成150字第三人称章节，importance 8 高权重入桶（tags: 编年记,长期记忆），后台跑不挡对话——这是"每N条聊天生成长期记忆"的自建实现，OB 本身无此机制。③"乱码"桶名=无名桶拿bucket_id当名（脱水断档期/早期版本产物），新桶已恢复正常起名，旧的可在Dashboard手动改。
